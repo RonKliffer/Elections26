@@ -1,0 +1,299 @@
+{
+  "electionId": "25",
+  "electionName": "2022 workbook intermediate snapshot",
+  "sourceUrl": "workbook-reference",
+  "status": "provisional",
+  "mode": "demo",
+  "validVotes": 4763694,
+  "invalidVotes": 29947,
+  "votesCast": 4793641,
+  "eligibleVoters": 6788804,
+  "officialUpdatedAt": null,
+  "retrievedAt": "2022-11-03T00:00:00.000Z",
+  "reportingProgress": null,
+  "parties": [
+    {
+      "id": "מחל",
+      "ballot": "מחל",
+      "name": "הליכוד בהנהגת בנימין נתניהו לראשות הממשלה",
+      "votes": 1115049,
+      "officialSeats": null
+    },
+    {
+      "id": "פה",
+      "ballot": "פה",
+      "name": "יש עתיד בראשות יאיר לפיד לראשות הממשלה",
+      "votes": 847145,
+      "officialSeats": null
+    },
+    {
+      "id": "ט",
+      "ballot": "ט",
+      "name": "הציונות הדתית בראשות בצלאל סמוטריץ` ועוצמה יהודית",
+      "votes": 516146,
+      "officialSeats": null
+    },
+    {
+      "id": "כן",
+      "ballot": "כן",
+      "name": "המחנה הממלכתי בהנהגת בני גנץ לראשות הממשלה",
+      "votes": 432376,
+      "officialSeats": null
+    },
+    {
+      "id": "שס",
+      "ballot": "שס",
+      "name": "התאחדות הספרדים שומרי תורה תנועתו של מרן הרב עובדי",
+      "votes": 392644,
+      "officialSeats": null
+    },
+    {
+      "id": "ג",
+      "ballot": "ג",
+      "name": "יהדות התורה והשבת אגודת ישראל - דגל התורה",
+      "votes": 280125,
+      "officialSeats": null
+    },
+    {
+      "id": "ל",
+      "ballot": "ל",
+      "name": "ישראל ביתנו בראשות אביגדור ליברמן",
+      "votes": 213655,
+      "officialSeats": null
+    },
+    {
+      "id": "עם",
+      "ballot": "עם",
+      "name": "הרשימה הערבית המאוחדת",
+      "votes": 193916,
+      "officialSeats": null
+    },
+    {
+      "id": "ום",
+      "ballot": "ום",
+      "name": "חד\"ש תע\"ל בראשות איימן עודה ואחמד טיבי",
+      "votes": 178661,
+      "officialSeats": null
+    },
+    {
+      "id": "אמת",
+      "ballot": "אמת",
+      "name": "מפלגת העבודה בראשות מרב מיכאלי",
+      "votes": 175922,
+      "officialSeats": null
+    },
+    {
+      "id": "מרצ",
+      "ballot": "מרצ",
+      "name": "מרצ השמאל של ישראל בראשות זהבה גלאון",
+      "votes": 150696,
+      "officialSeats": null
+    },
+    {
+      "id": "ד",
+      "ballot": "ד",
+      "name": "בל\"ד - אלתג`מוע אלווטני אלדמוקרטי בראשות סמי אבו ש",
+      "votes": 138093,
+      "officialSeats": null
+    },
+    {
+      "id": "ב",
+      "ballot": "ב",
+      "name": "הבית היהודי בראשות איילת שקד",
+      "votes": 56793,
+      "officialSeats": null
+    },
+    {
+      "id": "אצ",
+      "ballot": "אצ",
+      "name": "חופש כלכלי בראשות אביר קארה",
+      "votes": 15817,
+      "officialSeats": null
+    },
+    {
+      "id": "קץ",
+      "ballot": "קץ",
+      "name": "באומץ בשבילך",
+      "votes": 14781,
+      "officialSeats": null
+    },
+    {
+      "id": "יז",
+      "ballot": "יז",
+      "name": "הכלכלית החדשה בראשות פרופסור ירון זליכה",
+      "votes": 13911,
+      "officialSeats": null
+    },
+    {
+      "id": "צ",
+      "ballot": "צ",
+      "name": "צעירים בוערים בהנהגת הדר מוכתר",
+      "votes": 8794,
+      "officialSeats": null
+    },
+    {
+      "id": "ף",
+      "ballot": "ף",
+      "name": "הפיראטים- הכי טוב לדעתי אני רוצה להיות שם",
+      "votes": 1728,
+      "officialSeats": null
+    },
+    {
+      "id": "ת",
+      "ballot": "ת",
+      "name": "דעת טוב ורע וברית שבט אברהם-עלה ירוק ואוסרת אל איס",
+      "votes": 1669,
+      "officialSeats": null
+    },
+    {
+      "id": "ק",
+      "ballot": "ק",
+      "name": "קול הסביבה והחי",
+      "votes": 1619,
+      "officialSeats": null
+    },
+    {
+      "id": "ני",
+      "ballot": "ני",
+      "name": "נתיב - נחיה תמיד יחד בכבוד",
+      "votes": 1344,
+      "officialSeats": null
+    },
+    {
+      "id": "ך",
+      "ballot": "ך",
+      "name": "אני ואתה",
+      "votes": 1321,
+      "officialSeats": null
+    },
+    {
+      "id": "קנ",
+      "ballot": "קנ",
+      "name": "כל קול קובע נועם קולמן ולירון עופרי לראשות הממשלה",
+      "votes": 1292,
+      "officialSeats": null
+    },
+    {
+      "id": "נק",
+      "ballot": "נק",
+      "name": "יש כיוון בראשות עמוס דב סילבר",
+      "votes": 1213,
+      "officialSeats": null
+    },
+    {
+      "id": "י",
+      "ballot": "י",
+      "name": "ישראל חופשית דמוקרטית בראשות אלי אבידר",
+      "votes": 1156,
+      "officialSeats": null
+    },
+    {
+      "id": "קך",
+      "ballot": "קך",
+      "name": "סדר חדש- למען האזרחים הותיקים בישראל",
+      "votes": 1078,
+      "officialSeats": null
+    },
+    {
+      "id": "נץ",
+      "ballot": "נץ",
+      "name": "העצמאים החדשים בראשות יורם מועלמי",
+      "votes": 1018,
+      "officialSeats": null
+    },
+    {
+      "id": "ץ",
+      "ballot": "ץ",
+      "name": "מנהיגות חברתית",
+      "votes": 982,
+      "officialSeats": null
+    },
+    {
+      "id": "רז",
+      "ballot": "רז",
+      "name": "רשימת שלושים\\ארבעים בראשות סטלה ויינשטיין",
+      "votes": 948,
+      "officialSeats": null
+    },
+    {
+      "id": "נז",
+      "ballot": "נז",
+      "name": "כבוד האדם בראשות עו\"ד ארקדי פוגץ`",
+      "votes": 533,
+      "officialSeats": null
+    },
+    {
+      "id": "ז",
+      "ballot": "ז",
+      "name": "שחר כוח חברתי בראשות וג`די טאהר",
+      "votes": 530,
+      "officialSeats": null
+    },
+    {
+      "id": "יק",
+      "ballot": "יק",
+      "name": "מפלגת הגוש התנ\"כי",
+      "votes": 425,
+      "officialSeats": null
+    },
+    {
+      "id": "נר",
+      "ballot": "נר",
+      "name": "אנחנו - בראשות עו\"ד מוש חוג`ה",
+      "votes": 413,
+      "officialSeats": null
+    },
+    {
+      "id": "קי",
+      "ballot": "קי",
+      "name": "הלב היהודי בראשות אלי יוסף",
+      "votes": 412,
+      "officialSeats": null
+    },
+    {
+      "id": "זץ",
+      "ballot": "זץ",
+      "name": "צומת בראשות משה גרין דרכו של רפול",
+      "votes": 377,
+      "officialSeats": null
+    },
+    {
+      "id": "יץ",
+      "ballot": "יץ",
+      "name": "צו השעה",
+      "votes": 265,
+      "officialSeats": null
+    },
+    {
+      "id": "נף",
+      "ballot": "נף",
+      "name": "מפלגת שמע בראשות נפתלי גולדמן",
+      "votes": 256,
+      "officialSeats": null
+    },
+    {
+      "id": "ינ",
+      "ballot": "ינ",
+      "name": "איחוד בני הברית -בראשות רב חובל בשארה שליאן",
+      "votes": 234,
+      "officialSeats": null
+    },
+    {
+      "id": "זך",
+      "ballot": "זך",
+      "name": "קמ\"ה - קידום מעמד הפרט",
+      "votes": 205,
+      "officialSeats": null
+    },
+    {
+      "id": "זנ",
+      "ballot": "זנ",
+      "name": "כח להשפיע בראשות בני אלבז",
+      "votes": 152,
+      "officialSeats": null
+    }
+  ],
+  "warnings": [
+    "Workbook intermediate snapshot; date unknown. Cached clock value is 17:09 with no calendar date."
+  ]
+}

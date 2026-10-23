@@ -1,0 +1,177 @@
+{
+  "note": "Extracted once for development, never read from Excel at runtime. Cached values are reference evidence, not a recalculation.",
+  "sheets": {
+    "תוצאות": {
+      "C2": {
+        "value": "4763694",
+        "formula": "SUM(C3:C42)"
+      },
+      "W2": {
+        "value": "0.7017",
+        "formula": null
+      },
+      "G3": {
+        "value": "כן",
+        "formula": "IF((C3/(SUM($C$3:C$42))>='נוסחאות'!$L$2), \"כן\", \"לא\")"
+      },
+      "H3": {
+        "value": "בטוח",
+        "formula": "IF(C3>0.0335*$W$3, \"בטוח\", \"\")"
+      },
+      "I3": {
+        "value": "0.2091588832",
+        "formula": "IF(D3>0, 1-('נוסחאות'!H3-(ROUNDDOWN('נוסחאות'!H3,0))), \"\")"
+      },
+      "W3": {
+        "value": "4763703.767",
+        "formula": "W1*W2"
+      },
+      "W6": {
+        "value": "1.006284445",
+        "formula": "W4/W3"
+      },
+      "W8": {
+        "value": "418055",
+        "formula": "SUMIF(G:G, \"לא\", C:C)"
+      },
+      "W9": {
+        "value": "0.08775839567",
+        "formula": "W8/W3"
+      },
+      "N17": {
+        "value": "64",
+        "formula": "D3+D5+D7+D8"
+      },
+      "W18": {
+        "value": "64",
+        "formula": "SUMIF(X19:X29, \"כן\", W19:W29)+W30"
+      }
+    },
+    "נתונים": {
+      "A2": {
+        "value": "יש עתיד בראשות יאיר לפיד לראשות הממשלה",
+        "formula": null
+      },
+      "C2": {
+        "value": "0.1778",
+        "formula": null
+      },
+      "G3": {
+        "value": "0.7145833333333333",
+        "formula": null
+      }
+    },
+    "נוסחאות": {
+      "C2": {
+        "value": "4762025",
+        "formula": "SUM(C3:C41)"
+      },
+      "J2": {
+        "value": "7",
+        "formula": "120-SUM(E3:E20)"
+      },
+      "K2": {
+        "value": "36213.65833",
+        "formula": "(SUMIFS(C$3:C$32,G$3:G$32,\"כן\"))/120"
+      },
+      "L2": {
+        "value": "0.0325",
+        "formula": null
+      },
+      "W2": {
+        "value": "קולות",
+        "formula": null
+      },
+      "X2": {
+        "value": "מנדטים",
+        "formula": null
+      },
+      "G3": {
+        "value": "כן",
+        "formula": "IF((C3/(SUM($C$3:C$41))>=$L$2), \"כן\", \"לא\")"
+      },
+      "H3": {
+        "value": "30.79084112",
+        "formula": "IF(G3=\"כן\", (C3/$K$2), 0)"
+      },
+      "I3": {
+        "value": "7574.408333",
+        "formula": "IF(G3=\"כן\", $K$2*(E3+1)-C3, \"\")"
+      },
+      "W3": {
+        "value": "1631195",
+        "formula": "IF(P3>0, IF(T3>0, O3+S3, O3), IF(T3>0, S3, 0))"
+      },
+      "W6": {
+        "value": "175922",
+        "formula": null
+      },
+      "W8": {
+        "value": "178661",
+        "formula": null
+      },
+      "W9": {
+        "value": "193916",
+        "formula": null
+      },
+      "N17": {
+        "value": "זך",
+        "formula": null
+      },
+      "W18": {
+        "value": "0",
+        "formula": null
+      }
+    },
+    "abc": {
+      "A2": {
+        "value": "1",
+        "formula": "RANK(X2, $X$2:$X$50, 1)"
+      },
+      "C2": {
+        "value": "הליכוד",
+        "formula": null
+      },
+      "J2": {
+        "value": "154821",
+        "formula": "roundup(SUM(D2:D50)*3.25%,0)"
+      },
+      "W2": {
+        "value": "0.1",
+        "formula": null
+      },
+      "X2": {
+        "value": "2.1",
+        "formula": "U2+V2+W2"
+      },
+      "G3": {
+        "value": "692324",
+        "formula": null
+      },
+      "H3": {
+        "value": "14.53336308",
+        "formula": null
+      },
+      "W3": {
+        "value": "0.2",
+        "formula": null
+      },
+      "W6": {
+        "value": "0.5",
+        "formula": null
+      },
+      "W8": {
+        "value": "0.7",
+        "formula": null
+      },
+      "W9": {
+        "value": "0.8",
+        "formula": null
+      },
+      "W18": {
+        "value": "1.7",
+        "formula": null
+      }
+    }
+  }
+}
