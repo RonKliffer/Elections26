@@ -14,7 +14,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The server starts its polling service automatically. Successful source data is shared by all viewers; browser requests do not independently contact the government site.
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The app fetches results when the page loads and when **רענון נתונים** is clicked. There is no background polling, browser interval, or automatic refresh when switching tabs. Source requests run server-side and the response waits for them to finish. Overlapping requests share one fetch within each server instance.
 
 ```sh
 npm test
@@ -26,6 +26,16 @@ npm start
 `npm start` runs a persistent production Node server on loopback. For a network-facing deployment, run it behind a reverse proxy on the same host, or use `node --use-system-ca node_modules/next/dist/bin/next start --hostname 0.0.0.0`. Provision a persistent, writable cache directory. Run **one application process**, without a cluster or multiple replicas. The scripts use Node's system CA trust; TLS verification remains enabled.
 
 No external database, API keys, remote fonts, or Excel runtime are required. The build does not fetch election data. Supply environment values before starting the server and restart after changing them.
+
+## Deploy to Vercel
+
+Import the GitHub repository as a Next.js project and use Node.js 24 or newer. The default build command is `npm run build`; do not configure a custom output directory or `npm start` command for Vercel Functions. Set `ELECTION_DATA_MODE=official` and leave `ELECTION_CACHE_DIR` unset. Redeploy after changing environment settings.
+
+Both results endpoints await the official fetch before responding and declare a 60-second function limit. Each of the two upstream requests has a separate 20-second timeout by default. No work relies on a timer surviving after a function response. Vercel automatically sets `VERCEL=1`, which selects writable temporary storage instead of the read-only application directory. The offline fixture is explicitly included in the function bundle for optional `ELECTION_DATA_MODE=demo` deployments.
+
+Vercel temporary storage and in-memory request sharing are **per instance and not durable**. Another instance, a cold start, or a redeployment may have no prior snapshot, change history, or failure backoff. Reliable restart recovery and globally coordinated government-source requests still require one persistent Node process with persistent storage, or a future shared external store. This lightweight Vercel mode does not provide those guarantees.
+
+If the dashboard has no data, inspect `/api/results`: the `error` field now identifies the official host that failed. An upstream timeout can also mean the official host is unreachable from the selected Vercel region; removing polling cannot fix a source-side network restriction. Check the function logs and source connectivity from that hosting region. Never disable TLS verification or substitute demo data for official data. To publish an explicit offline demonstration, set `ELECTION_DATA_MODE=demo` and redeploy; the dashboard will label it accordingly.
 
 ## Offline demonstration
 
@@ -73,18 +83,18 @@ The main numeric next-seat result is the minimum **definite** gain when a draw l
 
 This is an election-sized, practical what-if search, not a general solver for all synthetic apportionment paradoxes. It is disabled when the integer quota is smaller than the number of seats. It checks adjacent counts and returns a diagnostic on an invalid or unverified boundary. It is **not a forecast** and does not assume the hypothetical votes correspond to real outstanding ballots or the electorate's remaining capacity.
 
-## Refresh, persistence, and statuses
+## On-demand refresh, persistence, and statuses
 
-- Official polling defaults to 60 seconds, with a 20-second timeout per request. HTML and CSV are fetched server-side.
-- A single shared in-flight refresh prevents overlapping polls. Manual refresh has a 10-second minimum interval and respects failure backoff.
-- Failures back off to 120, 240, 480, then at most 900 seconds. The last valid snapshot remains visible with a stale/error message. Failed data never replaces it.
-- Browsers read the cached API every 10 seconds while visible. `GET /api/results` returns the state; `POST /api/refresh` requests a shared refresh. Neither accepts arbitrary upstream URLs.
+- Page load calls `GET /api/results`; clicking Refresh calls `POST /api/refresh`. Both await a server-side fetch of official HTML and CSV. No fetch is triggered by elapsed time or tab visibility changes.
+- A single shared in-flight refresh prevents overlapping requests within one instance. Reloads and button clicks share a 10-second minimum interval; requests during the cooldown return the current state.
+- After failures, a user may retry after 120, 240, 480, then at most 900 seconds. This is a retry cooldown, not a scheduled automatic request. The last valid snapshot remains visible with a stale/error message. Failed data never replaces it.
+- Neither endpoint accepts arbitrary upstream URLs. Browser HTTP caching is disabled. The UI shows the last retrieval time and explicitly states that refresh is on demand.
 - Two distinct successful snapshots are saved with atomic rename. Unchanged successful retrievals update retrieval time without erasing the last meaningful deltas. Cache files are namespaced by election, configuration, mode, and store version.
 - On restart, validated saved data starts as stale until a successful retrieval. Corrupt or incompatible cache data is not presented as valid.
 - Source publication status (`unknown`, `provisional`, `final`), connection health, testing state, and offline mode are separate fields. Official mandates are compared with computed seats and never overwrite them.
 - Coalition changes apply the same currently selected party set to the preceding snapshot. Browser coalition storage is isolated by election and roster.
 
-Environment settings are documented in `.env.example`. `ELECTION_CACHE_DIR` defaults to `.cache/elections`; `ELECTION_STALE_AFTER_MS` defaults to at least three polling intervals.
+Environment settings are documented in `.env.example`. `ELECTION_CACHE_DIR` defaults to `.cache/elections` locally and a directory under the OS temporary directory on Vercel. `ELECTION_STALE_AFTER_MS` defaults to 180,000 milliseconds. The former `ELECTION_POLL_INTERVAL_MS` setting is no longer used.
 
 ## Fixtures, tests, and reference workbook
 
@@ -98,6 +108,6 @@ Tests cover thresholds and exact boundaries, fractions, active/inactive agreemen
 
 - The future 2026 source structure, official roster, legal settings, and surplus agreements must be verified before changing out of testing mode. The 2022 adapter cannot promise compatibility with an unpublished source.
 - No official update timestamp/reporting-progress field exists in the presently observed final page. These remain unavailable.
-- One persistent Node process is supported. Multi-instance/serverless coordination needs a shared store and distributed polling lock.
+- Persistent restart recovery is supported by one Node process with a durable cache directory. Vercel supports on-demand fetching with per-instance temporary caching; durable shared state and cross-instance request coordination need an external store.
 - Exact ties without a simple adjacent definite boundary remain unresolved. Pathological tiny-count scenarios do not receive a fabricated next-seat figure.
 - Exit polls, authentication, and cross-device coalition synchronization are not included.

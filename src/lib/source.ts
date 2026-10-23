@@ -225,22 +225,39 @@ export class Official2022Adapter implements ElectionSourceAdapter {
     private readonly now = () => new Date(),
   ) {}
   private async text(url: string): Promise<string> {
-    const response = await this.request(url, {
-      cache: 'no-store',
-      signal: AbortSignal.timeout(this.timeoutMs),
-      headers: {
-        Accept: 'text/html,text/csv;q=0.9,*/*;q=0.5',
-        'User-Agent': 'KnessetResultsDashboard/1.0',
-      },
-    });
-    if (!response.ok) throw new Error(`המקור הרשמי החזיר HTTP ${response.status}.`);
-    const body = await response.text();
-    if (!body || body.length > 8_000_000) throw new Error('גודל תשובת המקור אינו תקין.');
-    return body;
+    try {
+      const response = await this.request(url, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(this.timeoutMs),
+        headers: {
+          Accept: 'text/html,text/csv;q=0.9,*/*;q=0.5',
+          'User-Agent': 'KnessetResultsDashboard/1.0',
+        },
+      });
+      if (!response.ok) throw new Error(`המקור הרשמי החזיר HTTP ${response.status}.`);
+      const body = await response.text();
+      if (!body || body.length > 8_000_000) throw new Error('גודל תשובת המקור אינו תקין.');
+      return body;
+    } catch (error) {
+      const timeout = error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name);
+      const detail = timeout
+        ? `תם זמן ההמתנה למקור (${this.timeoutMs / 1000} שניות). בדקו נגישות מהאזור שבו השרת מתארח.`
+        : error instanceof Error
+          ? error.message
+          : 'שגיאת רשת';
+      throw new Error(`שליפת הנתונים מ־${new URL(url).hostname} נכשלה: ${detail}`, {
+        cause: error,
+      });
+    }
   }
   async fetchSnapshot(config: ElectionConfig): Promise<ElectionSnapshot> {
     const html = await this.text(config.sourceUrl);
-    const csv = await this.text(parseNationalHtml(html, config).csvUrl);
+    const csvUrl = parseNationalHtml(html, config).csvUrl;
+    const csv = await this.text(csvUrl);
+    if (/^\s*(?:<!doctype\s+html|<html(?:\s|>))/i.test(csv))
+      throw new Error(
+        `המקור הרשמי ${new URL(csvUrl).hostname} החזיר דף HTML במקום קובץ CSV. הנתונים לא עודכנו; ניתן לנסות לרענן שוב מאוחר יותר.`,
+      );
     return normalizeOfficial(html, csv, config, this.now().toISOString());
   }
 }

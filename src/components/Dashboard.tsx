@@ -63,7 +63,7 @@ function Metric({
 }
 const connectionLabels = {
   loading: 'מתחברים למקור',
-  fresh: 'המקור מחובר',
+  fresh: 'השליפה האחרונה הצליחה',
   stale: 'נתונים שמורים · חיבור מושהה',
   error: 'המקור אינו זמין',
 };
@@ -96,17 +96,6 @@ export default function Dashboard() {
   }, []);
   useEffect(() => {
     void load();
-    const interval = setInterval(() => {
-      if (!document.hidden) void load();
-    }, 10000);
-    const focus = () => {
-      if (!document.hidden) void load();
-    };
-    document.addEventListener('visibilitychange', focus);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', focus);
-    };
   }, [load]);
   const snapshot = data?.snapshot,
     calc = data?.calculation;
@@ -185,6 +174,7 @@ export default function Dashboard() {
           </div>
         </section>
         <div className="source-strip">
+          <span>רענון בטעינת הדף ובלחיצה על רענון · ללא עדכון אוטומטי</span>
           <span>
             שליפה מוצלחת:{' '}
             <bdi className="num">
@@ -206,10 +196,10 @@ export default function Dashboard() {
               {snapshot ? 'הנתונים המוצגים הם השליפה התקינה האחרונה.' : 'אין עדיין נתונים להצגה.'}
             </strong>{' '}
             {clientError ?? data?.error}
-            {!clientError && data?.nextRefreshAt && (
+            {!clientError && data?.nextAllowedRefreshAt && (
               <span>
                 {' '}
-                ניסיון הבא: <bdi>{time(data.nextRefreshAt)}</bdi>.
+                ניתן לנסות לרענן שוב החל מ־<bdi>{time(data.nextAllowedRefreshAt)}</bdi>.
               </span>
             )}
           </div>

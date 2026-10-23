@@ -114,6 +114,23 @@ describe('official source ingestion', () => {
       'HTTP 503',
     );
   });
+  it.each(['html', 'csv'])('identifies the failing host on a %s source timeout', async (stage) => {
+    const request = vi.fn<typeof fetch>();
+    if (stage === 'csv') request.mockResolvedValueOnce(new Response(html));
+    request.mockRejectedValueOnce(new DOMException('Timed out', 'TimeoutError'));
+    await expect(new Official2022Adapter(request, 20000).fetchSnapshot(config)).rejects.toThrow(
+      stage === 'html' ? /votes25\.bechirot\.gov\.il.*20/ : /media25\.bechirot\.gov\.il.*20/,
+    );
+  });
+  it('explains an HTML response from the CSV host without passing it to the CSV parser', async () => {
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(html))
+      .mockResolvedValueOnce(new Response('<html dir="rtl"><body>Unavailable</body></html>'));
+    await expect(new Official2022Adapter(request).fetchSnapshot(config)).rejects.toThrow(
+      /media25\.bechirot\.gov\.il.*HTML.*CSV/,
+    );
+  });
   it('rejects a nonofficial export host', () => {
     expect(() =>
       parseNationalHtml(

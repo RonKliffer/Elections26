@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const fake = vi.hoisted(() => ({
-  start: vi.fn(async () => {}),
-  refresh: vi.fn(async (_manual?: boolean) => {}),
+  refresh: vi.fn(async () => {}),
   getState: vi.fn(() => ({ connection: 'fresh', snapshot: { validVotes: 4764742 } })),
 }));
 vi.mock('../src/lib/server/runtime', () => ({ getElectionService: () => fake }));
@@ -11,13 +10,12 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 describe('dashboard HTTP endpoints', () => {
-  it('returns cached state with browser caching disabled', async () => {
+  it('refreshes on page load with browser caching disabled', async () => {
     const response = await GET();
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect((await response.json()).snapshot.validVotes).toBe(4764742);
-    expect(fake.start).toHaveBeenCalledOnce();
-    expect(fake.refresh).not.toHaveBeenCalled();
+    expect(fake.refresh).toHaveBeenCalledOnce();
   });
   it('joins the shared manual refresh', async () => {
     const response = await POST(
@@ -27,7 +25,31 @@ describe('dashboard HTTP endpoints', () => {
       }),
     );
     expect(response.status).toBe(200);
-    expect(fake.refresh).toHaveBeenCalledWith(true);
+    expect(fake.refresh).toHaveBeenCalledExactlyOnceWith();
+  });
+  it.each(['load', 'manual'])('awaits a cold %s fetch before returning data', async (kind) => {
+    let complete!: () => void;
+    fake.refresh.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          complete = resolve;
+        }),
+    );
+    let returned = false;
+    const pending = (
+      kind === 'load'
+        ? GET()
+        : POST(new Request('http://localhost/api/refresh', { method: 'POST' }))
+    ).then((response) => {
+      returned = true;
+      return response;
+    });
+    await Promise.resolve();
+    expect(returned).toBe(false);
+    expect(fake.getState).not.toHaveBeenCalled();
+    complete();
+    expect((await pending).status).toBe(200);
+    expect(fake.getState).toHaveBeenCalledOnce();
   });
   it('works behind an HTTPS reverse proxy preserving the public Host', async () => {
     const response = await POST(

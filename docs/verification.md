@@ -15,3 +15,13 @@ Verified locally on 23 October 2026 (Asia/Jerusalem).
 - Default party colors were adjusted so white chart labels have contrast ratios of at least 4.6:1. This is not a claim of a full external accessibility audit.
 
 Screenshots from the browser checks are in the ignored `screenshots/` folder. These checks validate the local single-process application, not compatibility with the future 2026 website or a multi-instance deployment.
+
+## On-demand fetching update
+
+- Removed server startup fetching, background polling, browser intervals, and visibility-triggered refreshes. Page load and the Refresh button both await the shared fetch before returning state.
+- **83 automated tests passed**. They cover cold-response waiting, no background timers after elapsed time, cooldown/backoff, source timeout/HTML errors, and the writable temporary-cache default on Vercel. Strict TypeScript checking and the final production build passed.
+- A local production server started with `VERCEL=1` fetched live official results on first page load: forty lists, 4,764,742 valid votes, and 120 independently allocated seats. The Refresh button awaited a second source request, which returned HTML instead of the CSV; the dashboard retained the prior valid data and marked it stale.
+- Reloading the final rebuilt page successfully retrieved the official results again. A screenshot of this successful on-demand load is saved at `screenshots/dashboard-on-demand.png`.
+- The first successful retrieval remained unchanged while idle. The UI labels refreshing as on demand and shows the new invalid-votes and valid-turnout rows in the summary cards.
+- Both API function tracing manifests include the explicit offline fixture.
+- The existing public Vercel deployment returned a source timeout before these local changes. The updated code still needs to be pushed and redeployed; source reachability from Vercel is not established by local verification. Vercel temporary caching provides no durable or shared-instance guarantees.

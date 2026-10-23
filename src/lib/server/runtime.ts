@@ -5,6 +5,7 @@ import type { ElectionSnapshot } from '../types';
 import { Official2022Adapter, type ElectionSourceAdapter } from '../source';
 import { FileSnapshotStore } from './store';
 import { ElectionService } from './service';
+import { defaultCacheDirectory } from './deployment';
 
 function positiveEnv(name: string, fallback: number, minimum: number): number {
   const value = Number(process.env[name] ?? fallback);
@@ -18,7 +19,6 @@ export function getElectionService(): ElectionService {
   const mode = process.env.ELECTION_DATA_MODE ?? 'official';
   if (mode !== 'official' && mode !== 'demo')
     throw new Error('ELECTION_DATA_MODE must be official or demo');
-  const pollMs = positiveEnv('ELECTION_POLL_INTERVAL_MS', 60000, 10000);
   const adapter: ElectionSourceAdapter =
     mode === 'demo'
       ? {
@@ -43,13 +43,13 @@ export function getElectionService(): ElectionService {
     adapter,
     new FileSnapshotStore(
       electionConfig,
-      process.env.ELECTION_CACHE_DIR ?? '.cache/elections',
+      process.env.ELECTION_CACHE_DIR ?? defaultCacheDirectory(),
       mode,
     ),
     {
-      pollMs,
-      staleMs: positiveEnv('ELECTION_STALE_AFTER_MS', Math.max(180000, pollMs * 3), pollMs),
-      manualMinMs: 10000,
+      retryBaseMs: 60000,
+      staleMs: positiveEnv('ELECTION_STALE_AFTER_MS', 180000, 10000),
+      minIntervalMs: 10000,
       maxBackoffMs: 900000,
     },
   );

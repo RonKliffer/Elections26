@@ -12,7 +12,7 @@ import type { ElectionSourceAdapter } from '../src/lib/source';
 import type { ElectionSnapshot } from '../src/lib/types';
 import { addVotes, config, final2022 } from './helpers';
 
-const options = { pollMs: 60000, staleMs: 180000, manualMinMs: 10000, maxBackoffMs: 900000 };
+const options = { retryBaseMs: 60000, staleMs: 180000, minIntervalMs: 10000, maxBackoffMs: 900000 };
 function memoryStore(initial: StoredSnapshots | null = null): SnapshotStore {
   let saved = initial;
   return {
@@ -22,19 +22,15 @@ function memoryStore(initial: StoredSnapshots | null = null): SnapshotStore {
     }),
   };
 }
-const services: ElectionService[] = [];
 function service(adapter: ElectionSourceAdapter, store = memoryStore()) {
   const s = new ElectionService(config, adapter, store, options);
-  services.push(s);
   return s;
 }
 afterEach(() => {
-  services.forEach((s) => s.stop());
-  services.length = 0;
   vi.useRealTimers();
 });
 
-describe('shared election polling service', () => {
+describe('shared on-demand election service', () => {
   it('fetches once for overlapping callers', async () => {
     let resolve!: (s: ElectionSnapshot) => void;
     const fetchSnapshot = vi.fn(
@@ -46,7 +42,7 @@ describe('shared election polling service', () => {
     const s = service({ fetchSnapshot });
     await s.initialize();
     const a = s.refresh(),
-      b = s.refresh(true);
+      b = s.refresh();
     await Promise.resolve();
     expect(fetchSnapshot).toHaveBeenCalledTimes(1);
     resolve({ ...final2022, retrievedAt: new Date().toISOString() });
@@ -63,7 +59,7 @@ describe('shared election polling service', () => {
     const s = service({ fetchSnapshot });
     await s.refresh();
     await vi.advanceTimersByTimeAsync(10000);
-    await s.refresh(true);
+    await s.refresh();
     expect(s.getState().snapshot?.validVotes).toBe(4764742);
     expect(s.getState().connection).toBe('stale');
     expect(s.getState().error).toContain('network unavailable');
@@ -83,7 +79,7 @@ describe('shared election polling service', () => {
     });
     await s.refresh();
     await vi.advanceTimersByTimeAsync(10000);
-    await s.refresh(true);
+    await s.refresh();
     expect(s.getState().snapshot?.validVotes).toBe(4764742);
     expect(s.getState().connection).toBe('stale');
   });
@@ -92,29 +88,33 @@ describe('shared election polling service', () => {
     const fetchSnapshot = vi.fn().mockRejectedValue(new Error('offline'));
     const s = service({ fetchSnapshot });
     await s.refresh();
-    await s.refresh(true);
+    await s.refresh();
     expect(fetchSnapshot).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(119999);
-    await s.refresh(true);
+    await s.refresh();
     expect(fetchSnapshot).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(1);
-    await s.refresh(true);
+    await s.refresh();
     expect(fetchSnapshot).toHaveBeenCalledTimes(2);
   });
-  it('polls in the background and stops cleanly', async () => {
+  it('fetches only on demand, never schedules a background poll, and respects the cooldown', async () => {
     vi.useFakeTimers();
     const fetchSnapshot = vi
       .fn()
       .mockImplementation(async () => ({ ...final2022, retrievedAt: new Date().toISOString() }));
     const s = service({ fetchSnapshot });
-    await s.start();
-    await vi.advanceTimersByTimeAsync(0);
+    await s.initialize();
+    expect(fetchSnapshot).not.toHaveBeenCalled();
+    await s.refresh();
     expect(fetchSnapshot).toHaveBeenCalledTimes(1);
-    await vi.advanceTimersByTimeAsync(60000);
+    await s.refresh();
+    expect(fetchSnapshot).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(180000);
+    expect(fetchSnapshot).toHaveBeenCalledTimes(1);
+    await s.refresh();
     expect(fetchSnapshot).toHaveBeenCalledTimes(2);
-    s.stop();
-    await vi.advanceTimersByTimeAsync(120000);
-    expect(fetchSnapshot).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(0);
   });
   it('preserves meaningful deltas across unchanged successful refreshes', async () => {
     vi.useFakeTimers();
@@ -123,10 +123,10 @@ describe('shared election polling service', () => {
     const s = service({ fetchSnapshot });
     await s.refresh();
     await vi.advanceTimersByTimeAsync(10000);
-    await s.refresh(true);
+    await s.refresh();
     expect(s.getState().changes?.parties['מחל']?.votes).toBe(1000);
     await vi.advanceTimersByTimeAsync(10000);
-    await s.refresh(true);
+    await s.refresh();
     expect(s.getState().changes?.parties['מחל']?.votes).toBe(1000);
   });
   it('restores validated last-known results on restart before an offline refresh', async () => {

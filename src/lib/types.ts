@@ -115,7 +115,7 @@ export interface DashboardState {
   error: string | null;
   refreshing: boolean;
   lastAttemptAt: string | null;
-  nextRefreshAt: string | null;
+  nextAllowedRefreshAt: string | null;
   snapshot: ElectionSnapshot | null;
   calculation: ElectionCalculation | null;
   comparison: ElectionCalculation | null;

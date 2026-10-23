@@ -4,9 +4,9 @@ import { assertSnapshot, type ElectionSourceAdapter } from '../source';
 import { snapshotFingerprint, type SnapshotStore } from './store';
 
 export interface ServiceOptions {
-  pollMs: number;
+  retryBaseMs: number;
   staleMs: number;
-  manualMinMs: number;
+  minIntervalMs: number;
   maxBackoffMs: number;
   now?: () => number;
 }
@@ -15,10 +15,8 @@ export class ElectionService {
   private previous: ElectionSnapshot | null = null;
   private inFlight: Promise<void> | null = null;
   private initialization: Promise<void> | null = null;
-  private timer: ReturnType<typeof setTimeout> | null = null;
   private failures = 0;
   private lastAttempt = -Infinity;
-  private stopped = true;
   private now: () => number;
   constructor(
     private config: ElectionConfig,
@@ -33,7 +31,7 @@ export class ElectionService {
       error: null,
       refreshing: false,
       lastAttemptAt: null,
-      nextRefreshAt: null,
+      nextAllowedRefreshAt: null,
       snapshot: null,
       calculation: null,
       comparison: null,
@@ -79,17 +77,6 @@ export class ElectionService {
     })();
     return this.initialization;
   }
-  async start(): Promise<void> {
-    await this.initialize();
-    if (!this.stopped) return;
-    this.stopped = false;
-    void this.refresh();
-  }
-  stop(): void {
-    this.stopped = true;
-    if (this.timer) clearTimeout(this.timer);
-    this.timer = null;
-  }
   getState(): DashboardState {
     if (
       this.state.connection === 'fresh' &&
@@ -99,17 +86,17 @@ export class ElectionService {
       return { ...this.state, connection: 'stale' };
     return this.state;
   }
-  refresh(manual = false): Promise<void> {
+  refresh(): Promise<void> {
     if (this.inFlight) return this.inFlight;
     const wait = this.failures
-      ? Math.min(this.options.maxBackoffMs, this.options.pollMs * 2 ** this.failures)
-      : this.options.manualMinMs;
-    if (this.now() - this.lastAttempt < (manual ? Math.max(wait, this.options.manualMinMs) : wait))
+      ? Math.min(this.options.maxBackoffMs, this.options.retryBaseMs * 2 ** this.failures)
+      : this.options.minIntervalMs;
+    if (this.now() - this.lastAttempt < Math.max(wait, this.options.minIntervalMs))
       return Promise.resolve();
     this.inFlight = this.performRefresh().finally(() => {
       this.inFlight = null;
       this.state.refreshing = false;
-      this.schedule();
+      this.updateCooldown();
     });
     return this.inFlight;
   }
@@ -144,18 +131,16 @@ export class ElectionService {
       this.state.error = e instanceof Error ? e.message : 'שגיאה בחיבור למקור הרשמי.';
     }
   }
-  private schedule(): void {
-    if (this.timer) clearTimeout(this.timer);
-    const delay = Math.min(
-      this.options.maxBackoffMs,
-      this.options.pollMs * 2 ** Math.min(this.failures, 10),
-    );
-    this.state.nextRefreshAt = new Date(this.now() + delay).toISOString();
-    if (!this.stopped) {
-      this.timer = setTimeout(() => {
-        void this.refresh();
-      }, delay);
-      this.timer.unref?.();
-    }
+  private updateCooldown(): void {
+    const delay = this.failures
+      ? Math.min(
+          this.options.maxBackoffMs,
+          this.options.retryBaseMs * 2 ** Math.min(this.failures, 10),
+        )
+      : this.options.minIntervalMs;
+    // This is permission to retry, never a scheduled background request.
+    this.state.nextAllowedRefreshAt = new Date(
+      this.lastAttempt + Math.max(delay, this.options.minIntervalMs),
+    ).toISOString();
   }
 }
