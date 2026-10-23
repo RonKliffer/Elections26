@@ -11,17 +11,7 @@ import type {
 import { partyColor, partyLabel } from '@/config/election';
 import { fraction, fullTime, number, signed, time } from '@/lib/format';
 import { publishedSeatWarnings } from '@/lib/engine';
-
-function Info({ text }: { text: string }) {
-  return (
-    <span className="info" tabIndex={0} role="note" aria-label={text}>
-      ?
-      <span className="tooltip" role="tooltip">
-        {text}
-      </span>
-    </span>
-  );
-}
+import Info from './Info';
 function Exact({ value }: { value: Rational | null }) {
   return (
     <bdi className="num exact" dir="ltr">

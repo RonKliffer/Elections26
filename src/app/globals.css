@@ -913,13 +913,14 @@ tfoot th {
   position: relative;
   font-weight: 400;
   cursor: help;
+  padding: 0;
+  background: transparent;
+  font-family: inherit;
 }
 .tooltip {
-  display: none;
-  position: absolute;
-  bottom: 20px;
-  right: -60px;
+  position: fixed;
   width: 230px;
+  max-width: calc(100vw - 24px);
   background: #1d354b;
   color: #fff;
   font-size: 11px;
@@ -928,12 +929,8 @@ tfoot th {
   white-space: normal;
   border-radius: 5px;
   text-align: right;
-  z-index: 30;
+  z-index: 1000;
   box-shadow: 0 4px 15px #12283f25;
-}
-.info:hover .tooltip,
-.info:focus .tooltip {
-  display: block;
 }
 .surplus-details {
   margin-bottom: 20px;
