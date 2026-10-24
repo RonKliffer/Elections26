@@ -746,22 +746,27 @@ tfoot th {
 .results-table tbody th:first-child,
 .results-table tfoot th:first-child {
   padding-right: 21px;
-  position: sticky;
-  right: 0;
-  z-index: 1;
   background: #fff;
   min-width: 160px;
 }
 .results-table thead th:first-child {
   background: #f6f8fa;
-  z-index: 2;
+}
+/* Safari can lose sticky cells inside RTL scrollers. Use normal flow on touch screens. */
+@media (min-width: 801px) and (hover: hover) and (pointer: fine) {
+  .results-table thead th:first-child,
+  .results-table tbody th:first-child,
+  .results-table tfoot th:first-child {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+  }
+  .results-table thead th:first-child {
+    z-index: 2;
+  }
 }
 .results-table tbody tr {
   border-bottom: 1px solid #edf1f5;
-}
-.results-table tbody tr:hover,
-.results-table tbody tr:hover th {
-  background: #f6f9fc;
 }
 .results-table tbody td {
   height: 62px;
@@ -1440,7 +1445,6 @@ footer {
   .results-table tfoot th:first-child {
     min-width: 135px;
     padding-right: 16px;
-    box-shadow: -4px 0 5px #20344804;
   }
   .results-table .party-name {
     font-size: 11px;
