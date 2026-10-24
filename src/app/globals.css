@@ -409,17 +409,7 @@ h3 {
   color: #8a99a5;
 }
 .majority-guide > span:nth-child(2) {
-  position: relative;
   color: #637d92;
-}
-.majority-guide > span:nth-child(2):before {
-  content: '';
-  position: absolute;
-  height: 59px;
-  width: 1px;
-  background: #12283f40;
-  top: -62px;
-  left: 50%;
 }
 .seat-legend {
   display: grid;
