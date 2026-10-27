@@ -2,7 +2,7 @@
 
 Hebrew RTL dashboard with independently calculated Bader–Ofer seats, surplus agreements, next-seat vote scenarios, threshold analytics, and a coalition calculator. Built with Next.js App Router, strict TypeScript, Tailwind CSS, and Vitest.
 
-The default is **official-source mode against the final 2022 election**. Every screen labels this as a test environment for the 2026 project. Excel is a development reference only: the application, build, tests, and offline demo require no spreadsheet software or workbook access.
+The default is **official-source mode for the live 2026 election (Knesset 26)** at [votes26.bechirot.gov.il](https://votes26.bechirot.gov.il). The roster comes from the [committee’s official candidate guide](https://www.gov.il/he/pages/candidates-lists-26); the dashboard uses the four surplus agreements specified by the user. An explicitly selected offline demo uses the historical 2022 election and its separate configuration. Excel is a development reference only: the application, build, tests, and offline demo require no spreadsheet software or workbook access.
 
 ## Run locally
 
@@ -10,6 +10,7 @@ Use Node.js **24 or newer** (the `.nvmrc` selects 24).
 
 ```sh
 npm ci
+npm run setup:browser
 cp .env.example .env.local
 npm run dev
 ```
@@ -23,19 +24,23 @@ npm run build
 npm start
 ```
 
-`npm start` runs a persistent production Node server on loopback. For a network-facing deployment, run it behind a reverse proxy on the same host, or use `node --use-system-ca node_modules/next/dist/bin/next start --hostname 0.0.0.0`. Provision a persistent, writable cache directory. Run **one application process**, without a cluster or multiple replicas. The scripts use Node's system CA trust; TLS verification remains enabled.
+`npm start` runs a persistent production Node server on loopback. For a network-facing deployment, run it behind a reverse proxy on the same host, or use `node --use-system-ca node_modules/next/dist/bin/next start --hostname 0.0.0.0`. Provision a persistent, writable cache directory. Run **one application process**, without a cluster or multiple replicas. The scripts use Node's system CA trust; TLS verification remains enabled. Local official fetching also requires the WebKit runtime installed by `npm run setup:browser`. On Linux, install its system dependencies with `npx playwright install --with-deps webkit` as part of provisioning.
 
 No external database, API keys, remote fonts, or Excel runtime are required. The build does not fetch election data. Supply environment values before starting the server and restart after changing them.
 
 ## Deploy to Vercel
 
-Import the GitHub repository as a Next.js project and use Node.js 24 or newer. The default build command is `npm run build`; do not configure a custom output directory or `npm start` command for Vercel Functions. Set `ELECTION_DATA_MODE=official` and leave `ELECTION_CACHE_DIR` unset. Redeploy after changing environment settings.
+Import the GitHub repository as a Next.js project and use Node.js 24 or newer. The default build command is `npm run build`; do not configure a custom output directory or `npm start` command for Vercel Functions. Set `ELECTION_DATA_MODE=official`, `ELECTION_SOURCE_TRANSPORT=fetch`, and leave `ELECTION_CACHE_DIR` unset. Redeploy after changing environment settings.
 
-Both results endpoints await the official fetch before responding and declare a 60-second function limit. Each of the two upstream requests has a separate 20-second timeout by default. No work relies on a timer surviving after a function response. Vercel automatically sets `VERCEL=1`, which selects writable temporary storage instead of the read-only application directory. The offline fixture is explicitly included in the function bundle for optional `ELECTION_DATA_MODE=demo` deployments.
+Both results endpoints await the official fetch before responding and declare a 60-second function limit. A direct national-page request has a 20-second timeout. The optional browser attempt shares a separate 30-second deadline across launch, navigation and waiting; the client allows 55 seconds for the complete operation. No work relies on a timer surviving after a function response. Vercel automatically sets `VERCEL=1`, which selects writable temporary storage instead of the read-only application directory. The offline fixture is explicitly included in the function bundle for optional `ELECTION_DATA_MODE=demo` deployments.
 
 Vercel temporary storage and in-memory request sharing are **per instance and not durable**. Another instance, a cold start, or a redeployment may have no prior snapshot, change history, or failure backoff. Reliable restart recovery and globally coordinated government-source requests still require one persistent Node process with persistent storage, or a future shared external store. This lightweight Vercel mode does not provide those guarantees.
 
-If the dashboard has no data, inspect `/api/results`: the `error` field identifies the official host that failed. The national page may block server requests with HTTP 403 or a browser challenge. For the configured final **2022** source only, the adapter can then download the live official city CSV using the export link in the saved final national page. Every national total and every party's votes must still match that page; missing rows, changed counts, HTML challenges, or failed CSV requests are rejected. The dashboard links to the freshly retrieved CSV and displays a warning with the national page's archive capture time. It never serves the saved CSV or demo snapshot as a successful official retrieval. This recovery is disabled for another election or source URL, and does not conceal malformed or inconsistent live national results.
+Local mode defaults to `ELECTION_SOURCE_TRANSPORT=auto`: try direct fetch, then a new isolated WebKit browser if the source returns an HTTP failure, a JavaScript-verification challenge, or a network failure. WebKit completes the source’s normal verification and reads the live national page; the same parser validates every count. Each attempt uses a disposable profile, normal certificate checks, a fixed official host, and a bounded deadline. No personal browser cookies, CAPTCHA solving, archived-page substitutions, or background polling are involved. The browser is closed after success or failure. Malformed live results do not trigger a second transport.
+
+`ELECTION_SOURCE_TRANSPORT=browser` selects WebKit directly; `fetch` disables browser retrieval. `ELECTION_BROWSER_ENGINE` defaults to `webkit`; `chromium` is an optional alternative, but installed Chrome did not complete verification during local testing. `ELECTION_BROWSER_CHANNEL` applies only to that Chromium alternative.
+
+Vercel defaults to `fetch` because these Functions do not include a browser binary. For the verified browser path, run a persistent Node server with WebKit and its system dependencies installed. Do not enable the browser path on a host without provisioning the runtime. If neither transport can obtain a valid publication, `/api/results` explains the failure and retains the previous validated snapshot. It never switches to the 2022 election or a demo.
 
 An upstream timeout can also mean the official host is unreachable from the selected Vercel region. Check the function logs and source connectivity from that hosting region. Never disable TLS verification or substitute demo data for official data. To publish an explicit offline demonstration, set `ELECTION_DATA_MODE=demo` and redeploy; the dashboard will label it accordingly.
 
@@ -43,23 +48,21 @@ An upstream timeout can also mean the official host is unreachable from the sele
 
 Set `ELECTION_DATA_MODE=demo` in `.env.local` and restart. This reads `fixtures/2022/official.json` and displays an explicit offline demonstration label. The original source status and original capture provenance remain distinguishable from the app's current fixture-read time. **An official-source failure never switches to demo mode.**
 
-## Configuration and changing to 2026
+## Live 2026 configuration and source
 
-Edit `src/config/election.ts`:
+`src/config/election.ts` configures Knesset 26, 120 seats, and a threshold of `13/400`. Party IDs are the current official ballot letters; old letters are not carried forward by display name. For example, `פה` is now “אני ואתה”, `ב` is Otzma Yehudit, and `ד` is “השותפות לכולם”. The new major lists include `דרך` (Yashar), `רק` (Beyachad), `די` (the reservists/economic list), and `ודם` (the Joint List).
 
-1. Set `electionId`, `electionName`, and `testing` for the actual election.
-2. Set `sourceUrl`, or override it with `ELECTION_SOURCE_URL`.
-3. Replace `expectedBallots` with the complete official roster. Party IDs use official ballot letters within an election, never display-name or row-position matching.
-4. Update the `parties` display labels and neutral colors. Unconfigured source parties are included with default colors and an explicit warning.
-5. Replace `surplusAgreements` with the new official pairs. One party may appear in at most one pair. Both parties must qualify independently. **The supplied four agreements belong to 2022.**
-6. Optionally add noneditorial named `blocs`; users may also save their own selections in their browser.
-7. Confirm the legal `electoralThreshold` rational value and `totalSeats`. The 2022 configuration uses `13/400` and 120.
+The four configured surplus agreements are Likud–Religious Zionism (`מחל / ט`), Shas–United Torah Judaism (`שס / ג`), Yashar–Democrats (`דרך / אמת`), and Beyachad–Yisrael Beiteinu (`רק / ל`), as specified by the user. Both parties must qualify independently. Withdrawn lists `כן` and `צבי` currently appear with zero votes on the results page; their rows are accepted but not required.
 
-The source contract is `ElectionSourceAdapter.fetchSnapshot(config): Promise<ElectionSnapshot>`. If the future website changes, implement or modify the adapter in `src/lib/source.ts` and select it in `src/lib/server/runtime.ts`. Keep source selectors, export links, parsing, and source reconciliation inside this layer. The engine and UI consume the normalized snapshot only.
+`src/lib/source2026.ts` reads the redesigned national page’s summary cards and desktop results table. Mobile cards repeat the votes and are ignored. It validates the election identity, required roster, unique ballot identifiers, safe integer counts, every party’s contribution to the national valid-vote total, valid plus invalid against votes cast, and votes cast against eligible voters. All counts belong to the same national publication; this adapter does not require a second CSV publication. Unknown lists are included with a warning, never discarded.
 
-The current adapter retrieves the [official national HTML](https://votes25.bechirot.gov.il/) and discovers its [official city CSV](https://media25.bechirot.gov.il/files/expc.csv). It extracts a literal export URL without executing source JavaScript. It validates each city's valid/invalid/cast totals, every party column, duplicate places, national totals, and every national party count. External envelopes are included. A mismatch during an asynchronous source publication keeps the preceding valid snapshot until the sources reconcile. If fetching the national page fails, the final-2022 recovery described above uses the saved national page for reconciliation while still requiring a successful live official CSV request.
+The source’s explicit `תוצאות נכון ל- DD/MM/YYYY HH:mm` timestamp is converted from `Asia/Jerusalem`, including daylight saving time. It remains `null` if not published. The notice that final results will be published later identifies provisional results; it is not a final-results declaration. No reporting percentage is inferred from the count of polling stations or turnout. The dashboard labels the reported votes’ share of eligible voters separately.
 
-The current final page does **not** provide an official update timestamp or reporting percentage. These fields are `null`, never inferred from HTTP dates, turnout, or the app's retrieval time. A future adapter may populate them only from explicit source evidence. Optional unavailable totals are displayed as unavailable.
+At very early counts the integer quota can produce an unresolved or invalid allocation. Valid vote totals remain visible, with the engine’s diagnostic. Coalition and seat charts appear only after a complete valid allocation; incomplete seats are not presented as a finished distribution. Next-seat scenarios also remain unavailable when the count is too small.
+
+The adapter contract remains `ElectionSourceAdapter.fetchSnapshot(config): Promise<ElectionSnapshot>`. The engine and UI consume only normalized snapshots. `src/config/election2022.ts` and the legacy HTML/CSV adapter are retained for historical regression tests and the explicit offline demo. Demo mode selects the 2022 configuration as well as its data, so current agreements are never applied to the old election.
+
+`ELECTION_SOURCE_URL` can override the national endpoint, but does not change the election identity. Remove any old `votes25` override from deployment settings and redeploy. The runtime requires a restart after configuration changes.
 
 ## Allocation mathematics
 
@@ -87,7 +90,7 @@ This is an election-sized, practical what-if search, not a general solver for al
 
 ## On-demand refresh, persistence, and statuses
 
-- Page load calls `GET /api/results`; clicking Refresh calls `POST /api/refresh`. Both await a server-side fetch of official HTML and CSV. No fetch is triggered by elapsed time or tab visibility changes.
+- Page load calls `GET /api/results`; clicking Refresh calls `POST /api/refresh`. Both await a server-side fetch of the official 2026 national page. No fetch is triggered by elapsed time or tab visibility changes.
 - A single shared in-flight refresh prevents overlapping requests within one instance. Reloads and button clicks share a 10-second minimum interval; requests during the cooldown return the current state.
 - After failures, a user may retry after 120, 240, 480, then at most 900 seconds. This is a retry cooldown, not a scheduled automatic request. The last valid snapshot remains visible with a stale/error message. Failed data never replaces it.
 - Neither endpoint accepts arbitrary upstream URLs. Browser HTTP caching is disabled. The UI shows the last retrieval time and explicitly states that refresh is on demand.
@@ -100,7 +103,9 @@ Environment settings are documented in `.env.example`. `ELECTION_CACHE_DIR` defa
 
 ## Fixtures, tests, and reference workbook
 
-`fixtures/2022/` includes the original official HTML/CSV, normalized official snapshot, capture provenance, and the independently extracted workbook snapshot. `npm run capture` explicitly recaptures the official fixture; `npm run capture -- --saved` regenerates JSON from the existing raw fixture. Do not recapture fixtures as part of routine tests.
+`fixtures/2026/` contains the browser-captured official national DOM, normalized snapshot, and capture provenance. It is a regression fixture, never a fallback for live official mode. `npm run capture` explicitly captures the current 2026 national page; `npm run capture -- --saved` regenerates JSON from the saved page while preserving capture provenance. An HTTP failure aborts capture before replacing fixtures.
+
+`fixtures/2022/` retains the original official HTML/CSV, normalized snapshot, provenance, and independently extracted workbook snapshot. `npm run capture -- --2022 --saved` regenerates that historical snapshot. Do not recapture fixtures as part of routine tests.
 
 The official fixture validates 4,764,742 valid votes, 29,851 invalid votes, 4,794,593 votes cast, and 6,788,804 eligible voters. The engine reproduces 113 initial seats plus 7 surplus seats, all official final party totals, and the exact surplus order.
 
@@ -108,8 +113,8 @@ Tests cover thresholds and exact boundaries, fractions, active/inactive agreemen
 
 ## Remaining limits
 
-- The future 2026 source structure, official roster, legal settings, and surplus agreements must be verified before changing out of testing mode. The 2022 adapter cannot promise compatibility with an unpublished source.
-- No official update timestamp/reporting-progress field exists in the presently observed final page. These remain unavailable.
+- Live local retrieval and manual refresh succeeded with isolated WebKit after direct Node/curl requests returned HTTP 404 or an AWS browser-verification challenge. Hosting must provide the WebKit runtime and its system dependencies to use this path; Vercel defaults to direct fetch only.
+- The observed 2026 source provides an update timestamp but no reporting-progress percentage. Layout changes or inconsistent publications are rejected and leave the previous validated snapshot visible.
 - Persistent restart recovery is supported by one Node process with a durable cache directory. Vercel supports on-demand fetching with per-instance temporary caching; durable shared state and cross-instance request coordination need an external store.
 - Exact ties without a simple adjacent definite boundary remain unresolved. Pathological tiny-count scenarios do not receive a fabricated next-seat figure.
 - Exit polls, authentication, and cross-device coalition synchronization are not included.

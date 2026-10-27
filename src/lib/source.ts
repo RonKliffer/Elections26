@@ -212,6 +212,18 @@ export function assertSnapshot(snapshot: ElectionSnapshot, config: ElectionConfi
   )
     errors.push('מספר המצביעים גדול ממספר בעלי זכות הבחירה.');
   if (!Number.isFinite(Date.parse(snapshot.retrievedAt))) errors.push('זמן שליפה לא תקין.');
+  if (
+    snapshot.officialUpdatedAt !== null &&
+    !Number.isFinite(Date.parse(snapshot.officialUpdatedAt))
+  )
+    errors.push('זמן עדכון רשמי לא תקין.');
+  if (
+    snapshot.reportingProgress !== null &&
+    (!Number.isFinite(snapshot.reportingProgress) ||
+      snapshot.reportingProgress < 0 ||
+      snapshot.reportingProgress > 100)
+  )
+    errors.push('אחוז דיווח לא תקין.');
   if (errors.length) throw new Error(errors.join(' '));
 }
 
@@ -224,14 +236,12 @@ interface ArchivedNationalPage {
 }
 class SourceFetchError extends Error {}
 
-export class Official2022Adapter implements ElectionSourceAdapter {
+export class OfficialSourceClient {
   constructor(
     private readonly request: typeof fetch = fetch,
     private readonly timeoutMs = 20000,
-    private readonly now = () => new Date(),
-    private readonly archivedNational?: () => Promise<ArchivedNationalPage>,
   ) {}
-  private async text(url: string): Promise<string> {
+  protected async text(url: string): Promise<string> {
     try {
       const response = await this.request(url, {
         cache: 'no-store',
@@ -258,6 +268,17 @@ export class Official2022Adapter implements ElectionSourceAdapter {
         cause: error,
       });
     }
+  }
+}
+
+export class Official2022Adapter extends OfficialSourceClient implements ElectionSourceAdapter {
+  constructor(
+    request: typeof fetch = fetch,
+    timeoutMs = 20000,
+    private readonly now = () => new Date(),
+    private readonly archivedNational?: () => Promise<ArchivedNationalPage>,
+  ) {
+    super(request, timeoutMs);
   }
   async fetchSnapshot(config: ElectionConfig): Promise<ElectionSnapshot> {
     let html: string;

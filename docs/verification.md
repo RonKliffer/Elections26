@@ -1,5 +1,29 @@
 # Verification record
 
+## Surplus agreement configuration — 28 October 2026
+
+- Updated the active 2026 configuration to exactly the four pairs specified by the user: `מחל / ט`, `שס / ג`, `דרך / אמת`, and `רק / ל`. This replaces the six-pair configuration described in the earlier migration record below.
+- The 2022 demonstration configuration remains separate.
+
+## Browser transport recovery — 28 October 2026
+
+- Diagnosed direct requests returning either cached government HTTP 404 HTML or an AWS JavaScript-verification challenge. An isolated Chrome attempt did not reach the results table. Isolated WebKit successfully navigated the official page and returned live results.
+- Added direct-fetch/browser transport selection, with WebKit as the local fallback. Every attempt uses a new browser context, closes it afterward, retains certificate verification, and permits only the configured official 2026 host. No personal browser state or saved fixture is used by this transport.
+- Verified the running local results API returned `connection: fresh`, no error, 38 parties, 2,661 valid votes, 2,670 votes cast, and an explicit source update of 28 October at 00:19 Israel time. Successful subsequent retrievals produced new retrieval timestamps and no imported-file warning. The dashboard displayed the successful connection, all rows and correct source time.
+- **138 automated tests passed**, along with strict TypeScript checking and the Webpack production build. A clean restart with normal default settings retrieved live results successfully; manual refresh was also checked in the browser.
+- Added `npm run setup:browser` to install the required official Playwright WebKit runtime. Local mode defaults to direct fetch followed by WebKit; Vercel remains direct-fetch-only unless a browser-capable host is provisioned.
+
+## Live 2026 source migration — 28 October 2026
+
+- Inspected the redesigned official national page through the browser and saved its DOM in `fixtures/2026/source.html`. The observed publication at 28 October, 00:19 Israel time contained 38 rows, 2,661 valid votes, 9 invalid votes, 2,670 votes cast, and 7,331,981 eligible voters.
+- Verified the current ballot roster and all six agreements against the committee’s [candidate-list guide](https://www.gov.il/he/pages/candidates-lists-26?chapterIndex=6), including the withdrawn lists that remain as zero-vote rows. Official mode now uses the 2026 parser/configuration; explicit demo mode retains the 2022 data/configuration.
+- **130 automated tests passed**, including real-page parsing, national reconciliation, missing/duplicate parties, malformed counts, source failure, daylight-saving conversion, runtime selection, preservation of valid early-count data, and the existing mathematical regressions. Strict TypeScript checking passed.
+- The production build passed with `npm run build -- --webpack`. Turbopack’s build-worker port was blocked by the local execution environment, including an escalated attempt.
+- A loopback production server was tested against the captured national page through a temporary test upstream. Browser checks confirmed 38 rows, the correct new party names, 00:19 source time, 2,670 reported votes, search for `דרך`, the exact-calculation tab, and manual refresh. The 740-pixel viewport had no document-wide overflow. This was a captured-source verification, not a successful live government request.
+- The current small-count allocation is unresolved. Valid vote totals remain visible, while incomplete coalition and seat charts are hidden. A scaled election-sized input with the same roster/agreements produced a complete 120-seat allocation in the tests.
+- **Initial source-access blocker (resolved locally by the browser transport above):** Node and curl returned government HTTP 404 pages from both the root and national-results endpoints, including a cache-busted request; the browser could display the official page. No saved-page fallback is enabled in live mode. Deployment must use `votes26` rather than an old `ELECTION_SOURCE_URL` pointing to `votes25`, and source connectivity must be checked from that host.
+- Screenshot: `screenshots/dashboard-2026-captured-source.png` (ignored local verification artifact).
+
 ## Official-source recovery — 27 October 2026
 
 - Reproduced HTTP 403 from the deployed results API and the official national host. The official city CSV remained reachable.
@@ -24,7 +48,7 @@ Verified locally on 23 October 2026 (Asia/Jerusalem).
 - Stopping the backend and triggering a browser refresh retained the displayed results and changed the connection indicator to stale, with an explicit error. Source-level failures, malformed refreshes, persistence, and recovery/backoff paths are covered by automated tests.
 - Default party colors were adjusted so white chart labels have contrast ratios of at least 4.6:1. This is not a claim of a full external accessibility audit.
 
-Screenshots from the browser checks are in the ignored `screenshots/` folder. These checks validate the local single-process application, not compatibility with the future 2026 website or a multi-instance deployment.
+Screenshots from the browser checks are in the ignored `screenshots/` folder. These original checks validated the 2022 single-process application; the 2026 migration is covered separately above. Multi-instance deployment guarantees are not established by these checks.
 
 ## On-demand fetching update
 

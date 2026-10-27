@@ -37,7 +37,12 @@ export interface ElectionConfig {
   expectedBallots: string[];
   blocs: { name: string; partyIds: string[]; color?: string }[];
   partyOrder: string[];
-  coalitions: { name: string; right: string[]; left: string[] }[];
+  coalitions: {
+    name: string;
+    right: string[];
+    left: string[];
+    campLabels?: { right: string; left: string };
+  }[];
   thresholdWatchDistance: number;
 }
 export type QuotaMode = 'statutory' | 'unrounded';

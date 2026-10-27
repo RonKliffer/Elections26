@@ -1,8 +1,8 @@
 import official from '../fixtures/2022/official.json';
 import workbook from '../fixtures/2022/workbook-snapshot.json';
-import { electionConfig } from '../src/config/election';
+import { election2022Config } from '../src/config/election2022';
 import type { ElectionConfig, ElectionSnapshot } from '../src/lib/types';
-export const config = structuredClone(electionConfig);
+export const config = structuredClone(election2022Config);
 export const final2022 = official as ElectionSnapshot;
 export const workbook2022 = workbook as ElectionSnapshot;
 export function synthetic(

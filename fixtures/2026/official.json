@@ -1,0 +1,283 @@
+{
+  "electionId": "26",
+  "electionName": "הבחירות לכנסת ה־26 · 2026",
+  "sourceUrl": "https://votes26.bechirot.gov.il",
+  "status": "provisional",
+  "mode": "official",
+  "validVotes": 2661,
+  "invalidVotes": 9,
+  "votesCast": 2670,
+  "eligibleVoters": 7331981,
+  "officialUpdatedAt": "2026-10-27T22:19:00.000Z",
+  "retrievedAt": "2026-10-27T22:27:45.717Z",
+  "reportingProgress": null,
+  "parties": [
+    {
+      "id": "מחל",
+      "ballot": "מחל",
+      "name": "הליכוד בהנהגת בנימין נתניהו לראשות הממשלה",
+      "votes": 719,
+      "officialSeats": null
+    },
+    {
+      "id": "ט",
+      "ballot": "ט",
+      "name": "הציונות הדתית בראשות בצלאל סמוטריץ' וזהות בראשות משה פייגלין",
+      "votes": 448,
+      "officialSeats": null
+    },
+    {
+      "id": "דרך",
+      "ballot": "דרך",
+      "name": "ישר! עם איזנקוט לראשות הממשלה מאחדים את ישראל",
+      "votes": 442,
+      "officialSeats": null
+    },
+    {
+      "id": "ב",
+      "ballot": "ב",
+      "name": "עוצמה יהודית בראשות איתמר בן גביר",
+      "votes": 223,
+      "officialSeats": null
+    },
+    {
+      "id": "אמת",
+      "ballot": "אמת",
+      "name": "הדמוקרטים בראשות יאיר גולן",
+      "votes": 215,
+      "officialSeats": null
+    },
+    {
+      "id": "רק",
+      "ballot": "רק",
+      "name": "ביחד בראשות נפתלי בנט",
+      "votes": 173,
+      "officialSeats": null
+    },
+    {
+      "id": "שס",
+      "ballot": "שס",
+      "name": "התאחדות הספרדים שומרי תורה תנועתו של מרן הרב עובדיה יוסף זצ\"ל",
+      "votes": 128,
+      "officialSeats": null
+    },
+    {
+      "id": "די",
+      "ballot": "די",
+      "name": "המילואימניקים והכלכלית בראשות יועז הנדל וירון זליכה",
+      "votes": 93,
+      "officialSeats": null
+    },
+    {
+      "id": "ל",
+      "ballot": "ל",
+      "name": "ישראל ביתנו בראשות אביגדור ליברמן",
+      "votes": 85,
+      "officialSeats": null
+    },
+    {
+      "id": "ך",
+      "ballot": "ך",
+      "name": "עמך ישראל בראשות עופר וינטר",
+      "votes": 78,
+      "officialSeats": null
+    },
+    {
+      "id": "ג",
+      "ballot": "ג",
+      "name": "יהדות התורה והשבת אגודת ישראל - דגל התורה",
+      "votes": 27,
+      "officialSeats": null
+    },
+    {
+      "id": "ני",
+      "ballot": "ני",
+      "name": "נעם לישראל למען עתיד הילדים בראשות אבי מעוז",
+      "votes": 19,
+      "officialSeats": null
+    },
+    {
+      "id": "עם",
+      "ballot": "עם",
+      "name": "רע\"ם - הרשימה הערבית המאוחדת",
+      "votes": 3,
+      "officialSeats": null
+    },
+    {
+      "id": "זך",
+      "ballot": "זך",
+      "name": "הציבור החרדי בראשות מוטי ליטנר",
+      "votes": 2,
+      "officialSeats": null
+    },
+    {
+      "id": "י",
+      "ballot": "י",
+      "name": "ישראל תחילה בראשות שרן השכל",
+      "votes": 2,
+      "officialSeats": null
+    },
+    {
+      "id": "בקר",
+      "ballot": "בקר",
+      "name": "אורות השחר בראשות ניסים לוק",
+      "votes": 1,
+      "officialSeats": null
+    },
+    {
+      "id": "ודם",
+      "ballot": "ודם",
+      "name": "הרשימה המשותפת",
+      "votes": 1,
+      "officialSeats": null
+    },
+    {
+      "id": "ד",
+      "ballot": "ד",
+      "name": "השותפות לכולם",
+      "votes": 1,
+      "officialSeats": null
+    },
+    {
+      "id": "בי",
+      "ballot": "בי",
+      "name": "צומת בית ישראל",
+      "votes": 1,
+      "officialSeats": null
+    },
+    {
+      "id": "פה",
+      "ballot": "פה",
+      "name": "אני ואתה מפלגת העם הישראלית",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "ז",
+      "ballot": "ז",
+      "name": "בטח - בטחון חברתי בראשות סמיון גרפמן",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "נץ",
+      "ballot": "נץ",
+      "name": "ביטחון אישי",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "זץ",
+      "ballot": "זץ",
+      "name": "ברית עולם לגאולת ישראל",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "יק",
+      "ballot": "יק",
+      "name": "גה\"ת - גוש התנ\"כי",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "ה",
+      "ballot": "ה",
+      "name": "גן עדן בראשות ישוע ישראל בן דוד",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "צף",
+      "ballot": "צף",
+      "name": "הפיראטים - צפים לטוב",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "רץ",
+      "ballot": "רץ",
+      "name": "הקהל - מפלגה כלל חרדית שנציגיה נבחרים על ידי הציבור בראשות הרב שלמה אלבוים",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "נקי",
+      "ballot": "נקי",
+      "name": "התיקון לשיטת הבחירות והממשל",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "כן",
+      "ballot": "כן",
+      "name": "כחול לבן בראשות בני גנץ",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "בד",
+      "ballot": "בד",
+      "name": "מפלגת ביחד נצליח - רשימה משותפת ערבית יהודית בראשות אבי שקד",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "קץ",
+      "ballot": "קץ",
+      "name": "משפט צדק",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "קך",
+      "ballot": "קך",
+      "name": "סדר-חדש לכינון חוקה, להפרדת רשויות ובחירות אישיות",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "נר",
+      "ballot": "נר",
+      "name": "צבע שחור - מגן עולם התורה",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "קה",
+      "ballot": "קה",
+      "name": "קול הנשים",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "נף",
+      "ballot": "נף",
+      "name": "שמע בראשות נפתלי גולדמן",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "צדק",
+      "ballot": "צדק",
+      "name": "שרשר לאהבה ואחדות העם",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "צבי",
+      "ballot": "צבי",
+      "name": "תנועת אחי תנועתו של הרב יורם אברג'ל זצ\"ל",
+      "votes": 0,
+      "officialSeats": null
+    },
+    {
+      "id": "ק",
+      "ballot": "ק",
+      "name": "תקומה",
+      "votes": 0,
+      "officialSeats": null
+    }
+  ],
+  "warnings": []
+}

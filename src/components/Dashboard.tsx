@@ -77,7 +77,7 @@ export default function Dashboard() {
       const response = await fetch(manual ? '/api/refresh' : '/api/results', {
         method: manual ? 'POST' : 'GET',
         cache: 'no-store',
-        signal: AbortSignal.timeout(45000),
+        signal: AbortSignal.timeout(55000),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       setData((await response.json()) as DashboardState);
@@ -103,13 +103,13 @@ export default function Dashboard() {
     ...new Set([...(snapshot?.warnings ?? []), ...(calc ? publishedSeatWarnings(calc) : [])]),
   ];
   const allocated = calc?.status === 'ok';
-  // The source publishes no counting progress of its own, so votes entered are
-  // measured against all eligible voters.
-  const counted =
-    snapshot?.reportingProgress ??
-    (snapshot?.votesCast != null && snapshot.eligibleVoters
+  const earlyCount =
+    !!calc && calc.parties.length > 0 && calc.statutoryQuota < (data?.config.totalSeats ?? 120);
+  // Votes divided by the electorate is not the percentage of ballots counted.
+  const reportedElectorateShare =
+    snapshot?.votesCast != null && snapshot.eligibleVoters
       ? (snapshot.votesCast / snapshot.eligibleVoters) * 100
-      : null);
+      : null;
   return (
     <>
       <a className="skip-link" href="#main">
@@ -127,11 +127,11 @@ export default function Dashboard() {
             </span>
           </a>
           <div className="header-context">
-            <span>בחירות 2026</span>
+            <span>{data?.config.testing ? 'הדגמת בחירות 2022' : 'בחירות 2026'}</span>
             <span className="testing-badge">
-              {data?.config.testing === false
-                ? 'תוצאות רשמיות · חישוב עצמאי'
-                : 'סביבת בדיקה · נתוני 2022'}
+              {data?.config.testing
+                ? 'סביבת בדיקה · נתוני 2022'
+                : 'נתוני ועדת הבחירות · חישוב עצמאי'}
             </span>
           </div>
           <div
@@ -150,13 +150,22 @@ export default function Dashboard() {
           <div>
             <div className="eyebrow">{data?.config.electionName ?? 'תוצאות הבחירות הארציות'}</div>
             <h1>תוצאות הבחירות לכנסת</h1>
-            {snapshot && (counted !== null || snapshot.status === 'final') && (
+            {snapshot && snapshot.reportingProgress !== null && (
               <p className="count-progress">
-                נספרו{' '}
-                <strong className="num">
-                  {snapshot.status === 'final' ? '100' : number(counted, 1)}%
-                </strong>{' '}
+                נספרו <strong className="num">{number(snapshot.reportingProgress, 1)}%</strong>{' '}
                 מהקולות
+              </p>
+            )}
+            {snapshot && snapshot.reportingProgress === null && snapshot.votesCast !== null && (
+              <p className="count-progress">
+                דווחו <strong className="num">{number(snapshot.votesCast)}</strong> קולות
+                {reportedElectorateShare !== null && (
+                  <>
+                    {' '}
+                    · <bdi className="num">{number(reportedElectorateShare, 2)}%</bdi> מבעלי זכות
+                    הבחירה
+                  </>
+                )}
               </p>
             )}
             <p>נתוני ועדת הבחירות המרכזית, עם חלוקת מנדטים עצמאית ושקופה.</p>
@@ -185,16 +194,19 @@ export default function Dashboard() {
           </div>
         </section>
         <div className="source-strip">
-          <span>רענון בטעינת הדף ובלחיצה על רענון · ללא עדכון אוטומטי</span>
-          <span>
-            שליפה מוצלחת:{' '}
+          <span className="source-update source-update-primary">
+            <span>עדכון אחרון במקור</span>
+            <bdi className="num" dir="ltr">
+              {snapshot?.officialUpdatedAt ? fullTime(snapshot.officialUpdatedAt) : 'לא פורסם'}
+            </bdi>
+          </span>
+          <span className="source-update">
+            <span>שליפה אחרונה</span>
             <bdi className="num">
               {snapshot ? fullTime(snapshot.retrievedAt) : 'ממתינים לנתונים'}
             </bdi>
           </span>
-          <span>
-            עדכון במקור: <bdi className="num">{time(snapshot?.officialUpdatedAt)}</bdi>
-          </span>
+          <span>רענון בטעינת הדף ובלחיצה על רענון · ללא עדכון אוטומטי</span>
           {snapshot && (
             <a href={snapshot.sourceUrl} target="_blank" rel="noreferrer">
               למקור הרשמי ↗
@@ -223,8 +235,13 @@ export default function Dashboard() {
           </div>
         )}
         {calc && calc.status !== 'ok' && (
-          <div className="notice notice-error" role="alert">
-            אין חלוקת מנדטים מלאה: {calc.diagnostics.join(' ')}
+          <div
+            className={`notice ${earlyCount ? 'notice-warning' : 'notice-error'}`}
+            role={earlyCount ? 'status' : 'alert'}
+          >
+            {earlyCount
+              ? 'הספירה עדיין מוקדמת לחלוקת מנדטים יציבה. קולות הרשימות מוצגים כעת; המנדטים יופיעו כשניתן יהיה להשלים את החישוב.'
+              : `אין חלוקת מנדטים מלאה: ${calc.diagnostics.join(' ')}`}
           </div>
         )}
         {!snapshot || !calc ? (
@@ -240,8 +257,12 @@ export default function Dashboard() {
           <>
             <Blocs data={data!} sim={sim}>
               <ThresholdWatch calc={calc} data={data!} />
-              <SeatChart calc={calc} data={data!} sim={sim} onSim={setSim} />
-              <SeatEdge calc={calc} data={data!} />
+              {allocated && (
+                <>
+                  <SeatChart calc={calc} data={data!} sim={sim} onSim={setSim} />
+                  <SeatEdge calc={calc} data={data!} />
+                </>
+              )}
             </Blocs>
             {!!data!.changes?.agreementChanges.length && (
               <div className="notice notice-warning" role="status">
@@ -385,12 +406,7 @@ interface Unit {
   label: string;
   seats: number;
 }
-const campLabels: Record<Camp, string> = { right: 'גוש נתניהו', left: 'גוש השינוי' };
-const campOptions = [
-  ['right', 'נתניהו'],
-  [null, 'ללא'],
-  ['left', 'שינוי'],
-] as const;
+const defaultCampLabels: Record<Camp, string> = { right: 'גוש נתניהו', left: 'גוש השינוי' };
 const splitSuffix = ':split';
 function campStatus(seats: number, other: number, majority: number) {
   if (seats >= majority) return { label: 'רוב מוחלט', tone: 'absolute' };
@@ -401,12 +417,19 @@ function campStatus(seats: number, other: number, majority: number) {
 function CampSwitch({
   value,
   label,
+  campLabels,
   onChange,
 }: {
   value: Camp | null;
   label: string;
+  campLabels: Record<Camp, string>;
   onChange: (camp: Camp | null) => void;
 }) {
+  const campOptions = [
+    ['right', campLabels.right.replace(/^גוש /, '')],
+    [null, 'ללא'],
+    ['left', campLabels.left.replace(/^גוש /, '')],
+  ] as const;
   return (
     <div className="camp-switch" role="radiogroup" aria-label={label}>
       {campOptions.map(([option, text]) => (
@@ -434,6 +457,7 @@ function Blocs({
   children: ReactNode;
 }) {
   const config = data.config;
+  const allocated = data.calculation?.status === 'ok';
   const rank = (id: string) => {
     const i = config.partyOrder.indexOf(id);
     return i === -1 ? config.partyOrder.length : i;
@@ -449,6 +473,8 @@ function Blocs({
     .sort()
     .join('|');
   const key = `knesset-camps-v2-${config.electionId}`;
+  // Revised preset memberships/labels must replace earlier saved defaults.
+  const definitions = JSON.stringify(config.coalitions);
   const defaults = (): Scenario[] =>
     config.coalitions.map((c) => ({
       name: c.name,
@@ -470,10 +496,12 @@ function Blocs({
     try {
       const value = JSON.parse(localStorage.getItem(key) ?? 'null') as {
         roster?: string;
+        definitions?: string;
         scenarios?: unknown;
       } | null;
       if (
         value?.roster === roster &&
+        value.definitions === definitions &&
         Array.isArray(value.scenarios) &&
         value.scenarios.length === config.coalitions.length &&
         value.scenarios.every(
@@ -485,22 +513,23 @@ function Blocs({
         )
       )
         setScenarios(value.scenarios as Scenario[]);
+      else setScenarios(defaults());
     } catch {
       /* A corrupted browser preference must not affect election data. */
     }
     setHydrated(true);
-    // The roster string is the stable identity for these preferences.
+    // Saved preferences belong to this roster and these preset definitions.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, roster]);
+  }, [key, roster, definitions]);
   useEffect(() => {
     if (hydrated) {
       try {
-        localStorage.setItem(key, JSON.stringify({ roster, scenarios }));
+        localStorage.setItem(key, JSON.stringify({ roster, definitions, scenarios }));
       } catch {
         /* Browser storage may be disabled. */
       }
     }
-  }, [key, roster, scenarios, hydrated]);
+  }, [key, roster, definitions, scenarios, hydrated]);
   useEffect(() => {
     if (!dragging) return;
     const move = (e: PointerEvent) => setDrag((d) => (d ? { ...d, dx: e.clientX - d.startX } : d));
@@ -523,6 +552,9 @@ function Blocs({
   if (scenarios.length === 0) return null;
 
   const current = scenarios[Math.min(active, scenarios.length - 1)]!;
+  const campLabels =
+    config.coalitions[Math.min(active, config.coalitions.length - 1)]?.campLabels ??
+    defaultCampLabels;
   const splitOf = (id: string): Split => {
     const split = current.splits[id];
     const max = (parties.find((p) => p.id === id)?.finalSeats ?? 1) - 1;
@@ -632,155 +664,183 @@ function Blocs({
           </button>
           {sim && <span className="sim-badge">מנדטים בהדמיה</span>}
         </div>
-        <div
-          ref={barRef}
-          className="bloc-bar"
-          role="img"
-          aria-label={legend.map((s) => `${s.name}: ${s.seats}`).join(', ')}
-        >
-          {segments.map((s) => (
+        {allocated ? (
+          <>
             <div
-              key={s.key}
-              className={[
-                'bloc-group',
-                s.camp ? `bloc-camp bloc-camp-${s.camp}` : 'bloc-middle',
-                hover !== undefined && hover === s.camp ? 'drop-target' : '',
-              ].join(' ')}
-              style={{ flexBasis: `${(s.seats / barSeats) * 100}%` }}
+              ref={barRef}
+              className="bloc-bar"
+              role="img"
+              aria-label={legend.map((s) => `${s.name}: ${s.seats}`).join(', ')}
             >
-              {s.units.map((u) => (
+              {segments.map((s) => (
                 <div
-                  key={u.id}
-                  data-party={u.id}
+                  key={s.key}
                   className={[
-                    'bloc-party',
-                    u.id.endsWith(splitSuffix) ? 'bloc-party-split' : '',
-                    drag?.id === u.id ? 'dragged' : '',
+                    'bloc-group',
+                    s.camp ? `bloc-camp bloc-camp-${s.camp}` : 'bloc-middle',
+                    hover !== undefined && hover === s.camp ? 'drop-target' : '',
                   ].join(' ')}
-                  style={{
-                    flexBasis: `${(u.seats / s.seats) * 100}%`,
-                    backgroundColor: s.color,
-                    transform: drag?.id === u.id ? `translateX(${drag.dx}px)` : undefined,
-                  }}
-                  title={`${u.label}: ${u.seats}`}
-                  onPointerDown={(e) => {
-                    if (e.button !== 0) return;
-                    e.preventDefault();
-                    setDrag({ id: u.id, startX: e.clientX, dx: 0 });
-                  }}
+                  style={{ flexBasis: `${(s.seats / barSeats) * 100}%` }}
                 >
-                  <span className="bloc-party-seats num">{u.seats}</span>
-                  <span className="bloc-party-name">{u.label}</span>
-                  {drag?.id === u.id && (
-                    <span className="bloc-party-tag">
-                      {u.label} · <bdi className="num">{u.seats}</bdi>
-                    </span>
-                  )}
-                </div>
-              ))}
-              {s.seats > 0 && <span className="bloc-group-total num">{s.seats}</span>}
-            </div>
-          ))}
-          {/* A camp that crosses the middle of the bar holds a majority. */}
-          <span className="bloc-majority" />
-          <span className="bloc-majority-label">{majority} לרוב</span>
-        </div>
-        <div className="bloc-legend">
-          {legend.map((s) => {
-            const badge = s.camp ? status[s.camp] : null;
-            return (
-              <div key={s.key} className={s.camp ? 'bloc-legend-camp' : ''}>
-                <span className="bloc-swatch" style={{ background: s.color }} />
-                <span className="bloc-name">{s.name}</span>
-                <strong className="num">{s.seats}</strong>
-                {badge && (
-                  <span className={`scenario-status status-${badge.tone}`}>{badge.label}</span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <p className="bloc-hint">
-          גררו מפלגה בפס כדי להעביר אותה בין המחנות ·{' '}
-          <a href="#camp-picker" onClick={() => setPickerOpen(true)}>
-            שיוך מפורט ופיצולים ↓
-          </a>
-        </p>
-      </section>
-      {children}
-      <section id="camp-picker" className="panel camp-panel" aria-label="שיוך המפלגות">
-        <button
-          className="panel-heading camp-toggle"
-          aria-expanded={pickerOpen}
-          aria-controls="camp-body"
-          onClick={() => setPickerOpen((open) => !open)}
-        >
-          <div>
-            <div className="eyebrow">שיוך מפורט ופיצולים</div>
-            <h2>{current.name}</h2>
-          </div>
-          <span className="camp-toggle-label">
-            {pickerOpen ? 'הסתרה' : 'הצגה'} <span aria-hidden="true">{pickerOpen ? '▴' : '▾'}</span>
-          </span>
-        </button>
-        {pickerOpen && (
-          <div id="camp-body" className="camp-body">
-            <p className="bloc-hint">
-              לכל מפלגה: נתניהו, ללא או שינוי. בשדה „פיצול” אפשר להפריד עריקים ממפלגה ולשייך אותם
-              למחנה אחר.
-            </p>
-            <div className="camp-picker" aria-label={`שיוך המפלגות: ${current.name}`}>
-              {bySeats.map((p) => {
-                const label = partyLabel(p.id, config, p.name);
-                const split = splitOf(p.id);
-                return (
-                  <div key={p.id} className="camp-row">
-                    <div className="camp-row-main">
-                      <PartyName party={p} config={config} />
-                      <bdi className="num">{p.finalSeats}</bdi>
-                      <CampSwitch
-                        value={partyCamp(p.id)}
-                        label={`שיוך ${label}`}
-                        onChange={(c) => setPartyCamp(p.id, c)}
-                      />
-                    </div>
-                    <div className="camp-row-split">
-                      <label>
-                        פיצול
-                        <input
-                          type="number"
-                          min={0}
-                          max={p.finalSeats - 1}
-                          value={split.seats}
-                          onChange={(e) =>
-                            setSplit(p.id, {
-                              ...split,
-                              seats: Math.max(
-                                0,
-                                Math.min(p.finalSeats - 1, Number(e.target.value) || 0),
-                              ),
-                            })
-                          }
-                        />
-                      </label>
-                      {split.seats > 0 && (
-                        <>
-                          <span>עריקים אל</span>
-                          <CampSwitch
-                            value={split.camp}
-                            label={`שיוך העריקים מ${label}`}
-                            onChange={(c) => setSplit(p.id, { ...split, camp: c })}
-                          />
-                        </>
+                  {s.units.map((u) => (
+                    <div
+                      key={u.id}
+                      data-party={u.id}
+                      className={[
+                        'bloc-party',
+                        u.id.endsWith(splitSuffix) ? 'bloc-party-split' : '',
+                        drag?.id === u.id ? 'dragged' : '',
+                      ].join(' ')}
+                      style={{
+                        flexBasis: `${(u.seats / s.seats) * 100}%`,
+                        backgroundColor: s.color,
+                        transform: drag?.id === u.id ? `translateX(${drag.dx}px)` : undefined,
+                      }}
+                      title={`${u.label}: ${u.seats}`}
+                      onPointerDown={(e) => {
+                        if (e.button !== 0) return;
+                        e.preventDefault();
+                        setDrag({ id: u.id, startX: e.clientX, dx: 0 });
+                      }}
+                    >
+                      <span className="bloc-party-seats num">{u.seats}</span>
+                      <span className="bloc-party-name">{u.label}</span>
+                      {drag?.id === u.id && (
+                        <span className="bloc-party-tag">
+                          {u.label} · <bdi className="num">{u.seats}</bdi>
+                        </span>
                       )}
                     </div>
+                  ))}
+                  {s.seats > 0 && <span className="bloc-group-total num">{s.seats}</span>}
+                </div>
+              ))}
+              {/* A camp that crosses the middle of the bar holds a majority. */}
+              <span className="bloc-majority" />
+              <span className="bloc-majority-label">{majority} לרוב</span>
+            </div>
+            <div className="bloc-legend">
+              {legend.map((s) => {
+                const badge = s.camp ? status[s.camp] : null;
+                return (
+                  <div key={s.key} className={s.camp ? 'bloc-legend-camp' : ''}>
+                    <span className="bloc-swatch" style={{ background: s.color }} />
+                    <span className="bloc-name">{s.name}</span>
+                    <strong className="num">{s.seats}</strong>
+                    {badge && (
+                      <span className={`scenario-status status-${badge.tone}`}>{badge.label}</span>
+                    )}
                   </div>
                 );
               })}
             </div>
+            <p className="bloc-hint">
+              גררו מפלגה בפס כדי להעביר אותה בין המחנות ·{' '}
+              <a href="#camp-picker" onClick={() => setPickerOpen(true)}>
+                שיוך מפורט ופיצולים ↓
+              </a>
+            </p>
+          </>
+        ) : (
+          <div className="scenario-memberships">
+            {(['right', 'left', null] as const).map((side) => {
+              const members = side
+                ? current[side]
+                    .map((id) => data.snapshot!.parties.find((p) => p.id === id))
+                    .filter((p) => p !== undefined)
+                : data.snapshot!.parties.filter((p) => partyCamp(p.id) === null);
+              return (
+                <div key={side ?? 'unassigned'}>
+                  <strong>{side ? campLabels[side] : 'ללא שיוך'}</strong>
+                  <p>
+                    {members.map((p) => partyLabel(p.id, config, p.name)).join(' · ') ||
+                      'אין מפלגות'}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
+      {children}
+      {allocated && (
+        <section id="camp-picker" className="panel camp-panel" aria-label="שיוך המפלגות">
+          <button
+            className="panel-heading camp-toggle"
+            aria-expanded={pickerOpen}
+            aria-controls="camp-body"
+            onClick={() => setPickerOpen((open) => !open)}
+          >
+            <div>
+              <div className="eyebrow">שיוך מפורט ופיצולים</div>
+              <h2>{current.name}</h2>
+            </div>
+            <span className="camp-toggle-label">
+              {pickerOpen ? 'הסתרה' : 'הצגה'}{' '}
+              <span aria-hidden="true">{pickerOpen ? '▴' : '▾'}</span>
+            </span>
+          </button>
+          {pickerOpen && (
+            <div id="camp-body" className="camp-body">
+              <p className="bloc-hint">
+                לכל מפלגה: {campLabels.right}, ללא שיוך או {campLabels.left}. בשדה „פיצול” אפשר
+                להפריד עריקים ממפלגה ולשייך אותם למחנה אחר.
+              </p>
+              <div className="camp-picker" aria-label={`שיוך המפלגות: ${current.name}`}>
+                {bySeats.map((p) => {
+                  const label = partyLabel(p.id, config, p.name);
+                  const split = splitOf(p.id);
+                  return (
+                    <div key={p.id} className="camp-row">
+                      <div className="camp-row-main">
+                        <PartyName party={p} config={config} />
+                        <bdi className="num">{p.finalSeats}</bdi>
+                        <CampSwitch
+                          campLabels={campLabels}
+                          value={partyCamp(p.id)}
+                          label={`שיוך ${label}`}
+                          onChange={(c) => setPartyCamp(p.id, c)}
+                        />
+                      </div>
+                      <div className="camp-row-split">
+                        <label>
+                          פיצול
+                          <input
+                            type="number"
+                            min={0}
+                            max={p.finalSeats - 1}
+                            value={split.seats}
+                            onChange={(e) =>
+                              setSplit(p.id, {
+                                ...split,
+                                seats: Math.max(
+                                  0,
+                                  Math.min(p.finalSeats - 1, Number(e.target.value) || 0),
+                                ),
+                              })
+                            }
+                          />
+                        </label>
+                        {split.seats > 0 && (
+                          <>
+                            <span>עריקים אל</span>
+                            <CampSwitch
+                              campLabels={campLabels}
+                              value={split.camp}
+                              label={`שיוך העריקים מ${label}`}
+                              onChange={(c) => setSplit(p.id, { ...split, camp: c })}
+                            />
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
     </>
   );
 }
