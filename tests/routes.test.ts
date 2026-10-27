@@ -10,6 +10,28 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 describe('dashboard HTTP endpoints', () => {
+  it.each(['load', 'manual'])(
+    'returns a diagnostic JSON response when %s fails unexpectedly',
+    async (kind) => {
+      const failure = new Error('private server configuration detail');
+      fake.refresh.mockRejectedValueOnce(failure);
+      const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        const response = await (kind === 'load'
+          ? GET()
+          : POST(new Request('http://localhost/api/refresh', { method: 'POST' })));
+        expect(response.status).toBe(503);
+        expect(response.headers.get('Cache-Control')).toBe('no-store');
+        const body = await response.json();
+        expect(body.code).toBe('RESULTS_SERVICE_UNAVAILABLE');
+        expect(body.error).toBeTruthy();
+        expect(JSON.stringify(body)).not.toContain(failure.message);
+        expect(log).toHaveBeenCalledWith(expect.any(String), failure);
+      } finally {
+        log.mockRestore();
+      }
+    },
+  );
   it('refreshes on page load with browser caching disabled', async () => {
     const response = await GET();
     expect(response.status).toBe(200);

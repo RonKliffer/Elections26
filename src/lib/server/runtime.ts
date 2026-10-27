@@ -24,7 +24,8 @@ export function getElectionService(): ElectionService {
     throw new Error('ELECTION_DATA_MODE must be official or demo');
   const config = mode === 'demo' ? election2022Config : electionConfig;
   const transport =
-    process.env.ELECTION_SOURCE_TRANSPORT ?? (process.env.VERCEL ? 'fetch' : 'auto');
+    process.env.ELECTION_SOURCE_TRANSPORT ??
+    (process.env.VERCEL === '1' && process.env.ELECTION_CONTAINER !== '1' ? 'fetch' : 'auto');
   if (!['auto', 'fetch', 'browser'].includes(transport))
     throw new Error('ELECTION_SOURCE_TRANSPORT must be auto, fetch or browser');
   const engine = process.env.ELECTION_BROWSER_ENGINE ?? 'webkit';

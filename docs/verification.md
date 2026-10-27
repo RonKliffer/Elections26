@@ -1,5 +1,14 @@
 # Verification record
 
+## Vercel browser runtime packaging — 28 October 2026
+
+- The public deployment served the dashboard but `/api/results` returned an empty HTTP 500. The exact exception was unavailable without its runtime logs. The previous Vercel default also disabled the locally successful browser fallback.
+- Added a Vercel container definition with Node.js 24, a standalone Next.js server, complete Playwright runtime packages, WebKit and its Linux dependencies. Container mode enables browser fallback; ordinary Functions keep their fetch-only default. The browser library is imported only when retrieval needs it.
+- Unexpected service initialization/response failures now return HTTP 503 JSON and log the exception. The dashboard displays the API's diagnostic instead of treating every HTTP failure as a network outage.
+- **142 tests passed**, strict TypeScript checking passed, and `ELECTION_CONTAINER=1 npm run build -- --webpack` passed. The container preset and port were checked against Vercel's current configuration schema. Type checking was rerun after the build completed, since running both concurrently raced over generated `.next/types` files.
+- Copied the standalone bundle, static files and full browser packages into a separate temporary directory and started it with `VERCEL=1` and `ELECTION_CONTAINER=1`. Both `auto` and explicit `browser` retrieval returned HTTP 200, `connection: fresh`, no error, 38 parties and 14,386 valid votes. The observed publication was 28 October at 01:03 Israel time. This used newly retrieved live data, without a seeded cache.
+- Docker is unavailable locally: the Linux image build and official-source access from Vercel remain pending deployment verification. The earlier empty-500 exception is not established as a browser failure. Existing staged `next-env.d.ts` changes were preserved.
+
 ## Surplus agreement configuration — 28 October 2026
 
 - Updated the active 2026 configuration to exactly the four pairs specified by the user: `מחל / ט`, `שס / ג`, `דרך / אמת`, and `רק / ל`. This replaces the six-pair configuration described in the earlier migration record below.

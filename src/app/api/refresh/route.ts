@@ -1,4 +1,4 @@
-import { getElectionService } from '@/lib/server/runtime';
+import { resultsResponse } from '@/lib/server/results-response';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -8,7 +8,5 @@ export async function POST(request: Request) {
   // normal HTTPS reverse proxy can serve the persistent Node process.
   if (origin && new URL(origin).host !== (request.headers.get('host') ?? new URL(request.url).host))
     return Response.json({ error: 'Origin not allowed' }, { status: 403 });
-  const service = getElectionService();
-  await service.refresh();
-  return Response.json(service.getState(), { headers: { 'Cache-Control': 'no-store' } });
+  return resultsResponse();
 }

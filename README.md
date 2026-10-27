@@ -30,19 +30,26 @@ No external database, API keys, remote fonts, or Excel runtime are required. The
 
 ## Deploy to Vercel
 
-Import the GitHub repository as a Next.js project and use Node.js 24 or newer. The default build command is `npm run build`; do not configure a custom output directory or `npm start` command for Vercel Functions. Set `ELECTION_DATA_MODE=official`, `ELECTION_SOURCE_TRANSPORT=fetch`, and leave `ELECTION_CACHE_DIR` unset. Redeploy after changing environment settings.
+The repository includes `Dockerfile.vercel` and `vercel.json` to select Vercel's [Container runtime](https://vercel.com/docs/functions/runtimes/container). The image builds the standalone Next.js server with Node.js 24, installs Playwright WebKit with its Linux system dependencies, and runs as an unprivileged user. This provides the browser runtime needed when the official source blocks direct server requests.
 
-Both results endpoints await the official fetch before responding and declare a 60-second function limit. A direct national-page request has a 20-second timeout. The optional browser attempt shares a separate 30-second deadline across launch, navigation and waiting; the client allows 55 seconds for the complete operation. No work relies on a timer surviving after a function response. Vercel automatically sets `VERCEL=1`, which selects writable temporary storage instead of the read-only application directory. The offline fixture is explicitly included in the function bundle for optional `ELECTION_DATA_MODE=demo` deployments.
+Push these files and deploy the new revision. Remove previous build/output-directory overrides if configured; the Dockerfile builds and starts the application. Check these project environment settings before redeploying:
 
-Vercel temporary storage and in-memory request sharing are **per instance and not durable**. Another instance, a cold start, or a redeployment may have no prior snapshot, change history, or failure backoff. Reliable restart recovery and globally coordinated government-source requests still require one persistent Node process with persistent storage, or a future shared external store. This lightweight Vercel mode does not provide those guarantees.
+- `ELECTION_DATA_MODE=official`
+- `ELECTION_SOURCE_TRANSPORT=auto` (replace any earlier `fetch` override)
+- `ELECTION_BROWSER_ENGINE=webkit`
+- `PORT=3000` (also supplied in `vercel.json`)
+- Remove old `ELECTION_SOURCE_URL` values pointing at another election; the default is `https://votes26.bechirot.gov.il`.
+- Leave `ELECTION_CACHE_DIR` unset to use the image's writable `/tmp/elections26` directory.
 
-Local mode defaults to `ELECTION_SOURCE_TRANSPORT=auto`: try direct fetch, then a new isolated WebKit browser if the source returns an HTTP failure, a JavaScript-verification challenge, or a network failure. WebKit completes the source’s normal verification and reads the live national page; the same parser validates every count. Each attempt uses a disposable profile, normal certificate checks, a fixed official host, and a bounded deadline. No personal browser cookies, CAPTCHA solving, archived-page substitutions, or background polling are involved. The browser is closed after success or failure. Malformed live results do not trigger a second transport.
+After deployment, open `/api/results`. A successful retrieval returns JSON with `connection: "fresh"` and a current `snapshot.retrievedAt`. Then check the dashboard and its manual refresh. If retrieval fails, inspect the JSON error and Vercel runtime logs. WebKit success on a local machine does not guarantee that the source accepts the deployment's network region.
 
-`ELECTION_SOURCE_TRANSPORT=browser` selects WebKit directly; `fetch` disables browser retrieval. `ELECTION_BROWSER_ENGINE` defaults to `webkit`; `chromium` is an optional alternative, but installed Chrome did not complete verification during local testing. `ELECTION_BROWSER_CHANNEL` applies only to that Chromium alternative.
+Both endpoints await retrieval. Direct fetch has a 20-second timeout; browser fallback shares a separate 30-second deadline across launch, navigation and waiting. The client allows 55 seconds for the operation. The container must have a request duration of at least 60 seconds. Source work finishes before the response; it does not depend on background execution.
 
-Vercel defaults to `fetch` because these Functions do not include a browser binary. For the verified browser path, run a persistent Node server with WebKit and its system dependencies installed. Do not enable the browser path on a host without provisioning the runtime. If neither transport can obtain a valid publication, `/api/results` explains the failure and retains the previous validated snapshot. It never switches to the 2022 election or a demo.
+Local and container mode default to `auto`: direct fetch, then a new isolated WebKit browser for HTTP failures, JavaScript verification, or network errors. The parser validates every count. Each attempt uses a disposable profile, certificate checks, a fixed official host and a bounded deadline, and closes the browser afterward. Malformed live results do not trigger a second transport. `browser` selects WebKit directly; `fetch` disables it. Ordinary Vercel Functions without the container still default to `fetch` because no browser is provisioned there.
 
-An upstream timeout can also mean the official host is unreachable from the selected Vercel region. Check the function logs and source connectivity from that hosting region. Never disable TLS verification or substitute demo data for official data. To publish an explicit offline demonstration, set `ELECTION_DATA_MODE=demo` and redeploy; the dashboard will label it accordingly.
+If neither transport obtains a valid publication, the service reports the failure and retains its previous validated snapshot. It never substitutes demo data. Unexpected service errors return diagnostic JSON with HTTP 503 and write the exception to server logs.
+
+Temporary storage and in-memory request sharing are **per instance and not durable**. A cold start, another instance or redeployment may have no previous snapshot, history or backoff. Durable shared state and coordination across instances require an external store, or one persistent Node process with persistent storage.
 
 ## Offline demonstration
 
@@ -113,7 +120,7 @@ Tests cover thresholds and exact boundaries, fractions, active/inactive agreemen
 
 ## Remaining limits
 
-- Live local retrieval and manual refresh succeeded with isolated WebKit after direct Node/curl requests returned HTTP 404 or an AWS browser-verification challenge. Hosting must provide the WebKit runtime and its system dependencies to use this path; Vercel defaults to direct fetch only.
+- Live local retrieval and manual refresh succeeded with isolated WebKit after direct Node/curl requests returned HTTP 404 or an AWS browser-verification challenge. The Vercel container now provisions WebKit and its system dependencies; successful retrieval from Vercel still requires deployment verification.
 - The observed 2026 source provides an update timestamp but no reporting-progress percentage. Layout changes or inconsistent publications are rejected and leave the previous validated snapshot visible.
 - Persistent restart recovery is supported by one Node process with a durable cache directory. Vercel supports on-demand fetching with per-instance temporary caching; durable shared state and cross-instance request coordination need an external store.
 - Exact ties without a simple adjacent definite boundary remain unresolved. Pathological tiny-count scenarios do not receive a fabricated next-seat figure.

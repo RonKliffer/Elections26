@@ -1,4 +1,3 @@
-import { chromium, webkit } from 'playwright';
 import type { ElectionConfig, ElectionSnapshot } from '../types';
 import type { ElectionSourceAdapter } from '../source';
 import { normalizeOfficial2026 } from '../source2026';
@@ -23,6 +22,9 @@ export class Browser2026Adapter implements ElectionSourceAdapter {
       throw new Error('שליפה דרך דפדפן מותרת רק מהמקור הרשמי של בחירות 2026.');
     const deadline = Date.now() + this.timeoutMs;
     const remaining = () => Math.max(1, deadline - Date.now());
+    // Import only during retrieval. Fetch-only functions must not initialize a
+    // browser package (or fail at module load) before returning an API response.
+    const { chromium, webkit } = await import('playwright');
     const engine = this.engineName === 'webkit' ? webkit : chromium;
     const browser = await engine.launch({
       ...(engine === chromium ? { channel: this.channel, chromiumSandbox: true } : {}),

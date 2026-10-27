@@ -1,0 +1,35 @@
+FROM node:24-bookworm-slim AS build
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1 ELECTION_CONTAINER=1
+
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+RUN npm run build -- --webpack
+
+FROM node:24-bookworm-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    ELECTION_CONTAINER=1 \
+    ELECTION_DATA_MODE=official \
+    ELECTION_SOURCE_TRANSPORT=auto \
+    ELECTION_BROWSER_ENGINE=webkit \
+    ELECTION_CACHE_DIR=/tmp/elections26 \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+    HOSTNAME=0.0.0.0 \
+    PORT=3000
+
+COPY --from=build /app/.next/standalone ./
+COPY --from=build /app/.next/static ./.next/static
+# Playwright loads browser scripts and assets dynamically. Copy the complete
+# installed packages so their runtime files do not depend on tracing heuristics.
+COPY --from=build /app/node_modules/playwright ./node_modules/playwright
+COPY --from=build /app/node_modules/playwright-core ./node_modules/playwright-core
+RUN node node_modules/playwright/cli.js install --with-deps webkit \
+    && rm -rf /var/lib/apt/lists/* \
+    && chmod -R a+rX /ms-playwright
+
+USER node
+EXPOSE 3000
+CMD ["node", "--use-system-ca", "server.js"]

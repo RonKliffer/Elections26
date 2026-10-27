@@ -59,6 +59,7 @@ const connectionLabels = {
   stale: 'נתונים שמורים · חיבור מושהה',
   error: 'המקור אינו זמין',
 };
+class DashboardApiError extends Error {}
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardState | null>(null);
@@ -79,11 +80,22 @@ export default function Dashboard() {
         cache: 'no-store',
         signal: AbortSignal.timeout(55000),
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const failure = (await response.json().catch(() => null)) as { error?: unknown } | null;
+        throw new DashboardApiError(
+          typeof failure?.error === 'string'
+            ? failure.error
+            : `שירות התוצאות החזיר HTTP ${response.status}.`,
+        );
+      }
       setData((await response.json()) as DashboardState);
       setClientError(null);
-    } catch {
-      setClientError('לא ניתן להתחבר לשרת האפליקציה. הנתונים האחרונים נשמרו על המסך.');
+    } catch (error) {
+      setClientError(
+        error instanceof DashboardApiError
+          ? error.message
+          : 'לא ניתן להתחבר לשרת האפליקציה. הנתונים האחרונים נשמרו על המסך.',
+      );
     } finally {
       inFlight.current = false;
       setBusy(false);
