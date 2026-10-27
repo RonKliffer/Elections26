@@ -114,6 +114,119 @@ describe('official source ingestion', () => {
       'HTTP 503',
     );
   });
+  it.each(['blocked', 'challenge', 'timeout'])(
+    'recovers from a %s national page using a fresh CSV reconciled with the final archive',
+    async (failure) => {
+      const request = vi.fn<typeof fetch>();
+      if (failure === 'timeout')
+        request.mockRejectedValueOnce(new DOMException('Timed out', 'TimeoutError'));
+      else
+        request.mockResolvedValueOnce(
+          new Response('', {
+            status: failure === 'blocked' ? 403 : 202,
+            headers: failure === 'challenge' ? { 'x-amzn-waf-action': 'challenge' } : {},
+          }),
+        );
+      request.mockResolvedValueOnce(new Response(csv));
+      const archived = vi.fn(async () => ({ html, capturedAt: '2026-10-23T19:50:52.223Z' }));
+      const snapshot = await new Official2022Adapter(
+        request,
+        1000,
+        () => new Date(retrievedAt),
+        archived,
+      ).fetchSnapshot(config);
+      expect(snapshot).toMatchObject({
+        mode: 'official',
+        status: 'final',
+        sourceUrl: 'https://media25.bechirot.gov.il/files/expc.csv?',
+        retrievedAt,
+        officialUpdatedAt: null,
+        validVotes: 4764742,
+      });
+      expect(snapshot.parties).toEqual(final2022.parties);
+      expect(snapshot.warnings[0]).toContain('2026-10-23T19:50:52.223Z');
+      expect(archived).toHaveBeenCalledOnce();
+      expect(request).toHaveBeenCalledTimes(2);
+      expect(request.mock.calls[1]![0]).toBe('https://media25.bechirot.gov.il/files/expc.csv?');
+    },
+  );
+  it('does not replace malformed live results with the archived page', async () => {
+    const request = vi.fn<typeof fetch>().mockResolvedValue(new Response('<html>Changed</html>'));
+    const archived = vi.fn(async () => ({ html, capturedAt: retrievedAt }));
+    await expect(
+      new Official2022Adapter(request, 1000, () => new Date(retrievedAt), archived).fetchSnapshot(
+        config,
+      ),
+    ).rejects.toThrow(/מזהה הבחירות/);
+    expect(archived).not.toHaveBeenCalled();
+  });
+  it.each([
+    { ...config, electionId: '26' },
+    { ...config, sourceUrl: 'https://example.com' },
+    { ...config, sourceUrl: 'https://votes25.bechirot.gov.il/other' },
+  ])('never applies the 2022 archive to another source or election', async (otherConfig) => {
+    const request = vi.fn<typeof fetch>().mockResolvedValue(new Response('', { status: 403 }));
+    const archived = vi.fn(async () => ({ html, capturedAt: retrievedAt }));
+    await expect(
+      new Official2022Adapter(request, 1000, () => new Date(retrievedAt), archived).fetchSnapshot(
+        otherConfig,
+      ),
+    ).rejects.toThrow('HTTP 403');
+    expect(archived).not.toHaveBeenCalled();
+  });
+  it.each(['failed', 'html', 'incomplete', 'different'])(
+    'rejects a %s live CSV during recovery',
+    async (kind) => {
+      const lines = csv.trimEnd().split(/\r?\n/);
+      const changedLines = [...lines];
+      const headers = lines[0]!.split(',');
+      const row = changedLines[1]!.split(',');
+      // Transfer a vote between parties, keeping every city/national total valid.
+      const likud = headers.indexOf('מחל');
+      const yeshAtid = headers.indexOf('פה');
+      row[likud] = String(Number(row[likud]) - 1);
+      row[yeshAtid] = String(Number(row[yeshAtid]) + 1);
+      changedLines[1] = row.join(',');
+      const request = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(new Response('', { status: 403 }))
+        .mockResolvedValueOnce(
+          new Response(
+            kind === 'html'
+              ? '<html>Unavailable</html>'
+              : kind === 'incomplete'
+                ? lines.slice(0, -1).join('\r\n')
+                : kind === 'different'
+                  ? changedLines.join('\r\n')
+                  : 'Unavailable',
+            { status: kind === 'failed' ? 503 : 200 },
+          ),
+        );
+      await expect(
+        new Official2022Adapter(
+          request,
+          1000,
+          () => new Date(retrievedAt),
+          async () => ({ html, capturedAt: retrievedAt }),
+        ).fetchSnapshot(config),
+      ).rejects.toThrow();
+    },
+  );
+  it('requires the archived national page to contain final results', async () => {
+    const request = vi.fn<typeof fetch>().mockResolvedValue(new Response('', { status: 403 }));
+    await expect(
+      new Official2022Adapter(
+        request,
+        1000,
+        () => new Date(retrievedAt),
+        async () => ({
+          html: html.replace('סופיות רשמיות', 'ארעיות'),
+          capturedAt: retrievedAt,
+        }),
+      ).fetchSnapshot(config),
+    ).rejects.toThrow(/עותק/);
+    expect(request).toHaveBeenCalledOnce();
+  });
   it.each(['html', 'csv'])('identifies the failing host on a %s source timeout', async (stage) => {
     const request = vi.fn<typeof fetch>();
     if (stage === 'csv') request.mockResolvedValueOnce(new Response(html));

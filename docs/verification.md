@@ -1,5 +1,15 @@
 # Verification record
 
+## Official-source recovery — 27 October 2026
+
+- Reproduced HTTP 403 from the deployed results API and the official national host. The official city CSV remained reachable.
+- Added recovery limited to the configured final 2022 source: download the live official CSV and reconcile all totals and party counts against the archived final national page. The dashboard discloses the archived-page capture time and links to the live CSV. Failed or inconsistent CSV responses still fail without substituting saved data.
+- **95 automated tests passed**, including browser challenges, timeouts, election/source isolation, missing CSV rows, and changed party counts with unchanged national totals. Strict TypeScript checking passed.
+- Production build passed with `next build --webpack`; local Turbopack was prevented from opening its build-worker port by the sandbox. Both API tracing manifests include the archived national HTML and provenance.
+- A live retrieval through the production runtime returned 40 parties, 4,764,742 valid votes, and a successful 120-seat allocation. Browser checks of initial loading and manual refresh showed successful official retrievals, the source warning, and the complete results dashboard.
+
+## Original verification
+
 Verified locally on 23 October 2026 (Asia/Jerusalem).
 
 - Next.js 16.4.3 production build completed successfully; TypeScript strict checking passed.

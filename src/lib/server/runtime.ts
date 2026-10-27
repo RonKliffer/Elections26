@@ -37,7 +37,18 @@ export function getElectionService(): ElectionService {
             };
           },
         }
-      : new Official2022Adapter(fetch, positiveEnv('ELECTION_REQUEST_TIMEOUT_MS', 20000, 1000));
+      : new Official2022Adapter(
+          fetch,
+          positiveEnv('ELECTION_REQUEST_TIMEOUT_MS', 20000, 1000),
+          () => new Date(),
+          async () => {
+            const [html, provenance] = await Promise.all([
+              readFile(path.join(process.cwd(), 'fixtures/2022/source.html'), 'utf8'),
+              readFile(path.join(process.cwd(), 'fixtures/2022/provenance.json'), 'utf8'),
+            ]);
+            return { html, capturedAt: JSON.parse(provenance).capturedAt as string };
+          },
+        );
   globalService.electionService = new ElectionService(
     electionConfig,
     adapter,

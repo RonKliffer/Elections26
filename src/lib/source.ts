@@ -218,11 +218,18 @@ export function assertSnapshot(snapshot: ElectionSnapshot, config: ElectionConfi
 export interface ElectionSourceAdapter {
   fetchSnapshot(config: ElectionConfig): Promise<ElectionSnapshot>;
 }
+interface ArchivedNationalPage {
+  html: string;
+  capturedAt: string;
+}
+class SourceFetchError extends Error {}
+
 export class Official2022Adapter implements ElectionSourceAdapter {
   constructor(
     private readonly request: typeof fetch = fetch,
     private readonly timeoutMs = 20000,
     private readonly now = () => new Date(),
+    private readonly archivedNational?: () => Promise<ArchivedNationalPage>,
   ) {}
   private async text(url: string): Promise<string> {
     try {
@@ -235,6 +242,8 @@ export class Official2022Adapter implements ElectionSourceAdapter {
         },
       });
       if (!response.ok) throw new Error(`המקור הרשמי החזיר HTTP ${response.status}.`);
+      if (response.headers.get('x-amzn-waf-action'))
+        throw new Error('הגנת האתר הרשמי דורשת אימות דפדפן.');
       const body = await response.text();
       if (!body || body.length > 8_000_000) throw new Error('גודל תשובת המקור אינו תקין.');
       return body;
@@ -245,19 +254,52 @@ export class Official2022Adapter implements ElectionSourceAdapter {
         : error instanceof Error
           ? error.message
           : 'שגיאת רשת';
-      throw new Error(`שליפת הנתונים מ־${new URL(url).hostname} נכשלה: ${detail}`, {
+      throw new SourceFetchError(`שליפת הנתונים מ־${new URL(url).hostname} נכשלה: ${detail}`, {
         cause: error,
       });
     }
   }
   async fetchSnapshot(config: ElectionConfig): Promise<ElectionSnapshot> {
-    const html = await this.text(config.sourceUrl);
+    let html: string;
+    let archived: ArchivedNationalPage | null = null;
+    try {
+      html = await this.text(config.sourceUrl);
+    } catch (error) {
+      const source = new URL(config.sourceUrl);
+      // This reference applies only to the completed 2022 election. Never use it
+      // for a future election, a different endpoint, or malformed live results.
+      if (
+        !(error instanceof SourceFetchError) ||
+        !this.archivedNational ||
+        config.electionId !== '25' ||
+        source.origin !== 'https://votes25.bechirot.gov.il' ||
+        !['/', '/nationalresults'].includes(source.pathname) ||
+        source.search
+      )
+        throw error;
+      archived = await this.archivedNational();
+      html = archived.html;
+      if (
+        !Number.isFinite(Date.parse(archived.capturedAt)) ||
+        parseNationalHtml(html, config).status !== 'final'
+      )
+        throw new Error('עותק דף התוצאות הסופיות אינו תקין.');
+    }
     const csvUrl = parseNationalHtml(html, config).csvUrl;
+    if (archived && csvUrl !== 'https://media25.bechirot.gov.il/files/expc.csv?')
+      throw new Error('כתובת קובץ היישובים אינה תואמת למקור השמור של 2022.');
     const csv = await this.text(csvUrl);
     if (/^\s*(?:<!doctype\s+html|<html(?:\s|>))/i.test(csv))
       throw new Error(
         `המקור הרשמי ${new URL(csvUrl).hostname} החזיר דף HTML במקום קובץ CSV. הנתונים לא עודכנו; ניתן לנסות לרענן שוב מאוחר יותר.`,
       );
-    return normalizeOfficial(html, csv, config, this.now().toISOString());
+    const snapshot = normalizeOfficial(html, csv, config, this.now().toISOString());
+    if (archived) {
+      snapshot.sourceUrl = csvUrl;
+      snapshot.warnings.push(
+        `העמוד הארצי אינו זמין לשליפה מהשרת. קובץ היישובים הרשמי נשלף כעת, וכל הסיכומים וקולות הרשימות אומתו מול דף התוצאות הסופיות של 2022 שנשמר ב־${archived.capturedAt}.`,
+      );
+    }
+    return snapshot;
   }
 }
