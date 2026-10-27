@@ -1,5 +1,11 @@
 # Verification record
 
+## Container certificate trust — 28 October 2026
+
+- Commit `c58a9b0` deployed successfully. The live endpoint returned diagnostic JSON: direct fetch received HTTP 404 and Linux WebKit reported `Unacceptable TLS certificate`.
+- Inspected the official Node slim Dockerfile: it removes the certificate packages installed during its build. Playwright's installed dependency list does not include `ca-certificates`. Added an explicit installation and initialization of the standard OS public-root bundle in the final image. TLS certificate verification remains enabled.
+- This follow-up changes only image provisioning; verification requires its automatic Vercel deployment because Docker is unavailable locally.
+
 ## Vercel browser runtime packaging — 28 October 2026
 
 - The public deployment served the dashboard but `/api/results` returned an empty HTTP 500. The exact exception was unavailable without its runtime logs. The previous Vercel default also disabled the locally successful browser fallback.

@@ -26,7 +26,13 @@ COPY --from=build /app/.next/static ./.next/static
 # installed packages so their runtime files do not depend on tracing heuristics.
 COPY --from=build /app/node_modules/playwright ./node_modules/playwright
 COPY --from=build /app/node_modules/playwright-core ./node_modules/playwright-core
-RUN node node_modules/playwright/cli.js install --with-deps webkit \
+# Node has bundled roots, but Linux WebKit needs the OS certificate bundle.
+# The slim base removes build-time CA packages; Playwright's dependency list
+# does not install them. Keep the public root store in the final image.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && update-ca-certificates \
+    && node node_modules/playwright/cli.js install --with-deps webkit \
     && rm -rf /var/lib/apt/lists/* \
     && chmod -R a+rX /ms-playwright
 
