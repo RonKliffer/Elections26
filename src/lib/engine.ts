@@ -428,6 +428,101 @@ export function additionalVotesForNextSeat(
   };
 }
 
+/**
+ * The mirror of additionalVotesForNextSeat: the fewest votes the party could have
+ * had fewer (removed from the national total too) before it holds one seat less.
+ * targetSeats is the resulting count, which is 0 when the loss crosses the threshold.
+ */
+export function votesToLoseSeat(
+  snapshot: ElectionSnapshot,
+  config: ElectionConfig,
+  partyId: string,
+  baseline = calculateElection(snapshot, config),
+): NextSeatResult {
+  const unavailable = (reason: string, evaluations = 0): NextSeatResult => ({
+    status: 'unavailable',
+    additionalVotes: null,
+    targetSeats: null,
+    reason,
+    evaluations,
+  });
+  const party = baseline.parties.find((p) => p.id === partyId);
+  if (baseline.status !== 'ok' || !party) return unavailable('אין חלוקת בסיס תקפה.');
+  if (party.finalSeats === 0) return unavailable('לרשימה אין מנדטים.');
+  if (baseline.statutoryQuota < config.totalSeats)
+    return unavailable('הספירה מוקדמת מדי לתרחיש אובדן מנדט יציב.');
+  const seats = party.finalSeats;
+  let evaluations = 0;
+  const cache = new Map<number, number | null>();
+  const boundaryTies = new Set<number>();
+  const evaluate = (lost: number): number | null => {
+    if (cache.has(lost)) return cache.get(lost)!;
+    evaluations++;
+    const simulated = calculateElection(
+      {
+        ...snapshot,
+        validVotes: snapshot.validVotes - lost,
+        parties: snapshot.parties.map((p) =>
+          p.id === partyId ? { ...p, votes: p.votes - lost } : p,
+        ),
+      },
+      config,
+    );
+    const count =
+      simulated.status === 'ok'
+        ? simulated.parties.find((p) => p.id === partyId)!.finalSeats
+        : null;
+    cache.set(lost, count);
+    return count;
+  };
+  // As in the gain search, an exact tie is resolved from its valid neighbours.
+  const probe = (lost: number): number | null => {
+    const value = evaluate(lost);
+    if (value !== null) return value;
+    const left = evaluate(Math.max(0, lost - 1)),
+      right = evaluate(Math.min(party.votes, lost + 1));
+    if (left === null || right === null || left < right) return null;
+    if (left >= seats && right < seats) boundaryTies.add(lost);
+    return left;
+  };
+  // Losing every vote certainly loses every seat, so the party's votes bound the search.
+  const bound = party.votes;
+  let low = 0,
+    high = 1;
+  while (high <= bound) {
+    const count = probe(high);
+    if (count === null)
+      return unavailable('שוויון או חלוקה לא תקפה בתרחיש; לא מוצג אומדן שרירותי.', evaluations);
+    if (count < seats) break;
+    low = high;
+    if (high === bound) return unavailable('לא נמצא פתרון בתחום החיפוש.', evaluations);
+    high = Math.min(high * 2, bound);
+  }
+  while (high - low > 1) {
+    const mid = Math.floor((low + high) / 2),
+      count = probe(mid);
+    if (count === null) return unavailable('שוויון או חלוקה לא תקפה במהלך החיפוש.', evaluations);
+    if (count < seats) high = mid;
+    else low = mid;
+  }
+  const before = probe(high - 1),
+    at = evaluate(high);
+  if (before === null || at === null || before < seats || at >= seats)
+    return unavailable('לא ניתן לאמת גבול חד־משמעי בתרחיש זה.', evaluations);
+  const tieAtVotes = boundaryTies.has(high - 1) ? high - 1 : undefined;
+  return {
+    status: 'ok',
+    additionalVotes: high,
+    targetSeats: at,
+    reason:
+      tieAtVotes === undefined
+        ? null
+        : `ב־${tieAtVotes} קולות נדרשת הכרעה. מוצג ההפסד המזערי שמוריד מנדט ללא הכרעה זו.`,
+    evaluations,
+    ...(tieAtVotes === undefined ? {} : { tieAtVotes }),
+  };
+}
+
 export function compareSnapshots(
   previous: ElectionSnapshot,
   current: ElectionSnapshot,

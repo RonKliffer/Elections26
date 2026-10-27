@@ -35,7 +35,9 @@ export interface ElectionConfig {
   surplusAgreements: [string, string][];
   parties: Record<string, { label: string; color: string }>;
   expectedBallots: string[];
-  blocs: { name: string; partyIds: string[] }[];
+  blocs: { name: string; partyIds: string[]; color?: string }[];
+  partyOrder: string[];
+  coalitions: { name: string; right: string[]; left: string[] }[];
   thresholdWatchDistance: number;
 }
 export type QuotaMode = 'statutory' | 'unrounded';
@@ -120,6 +122,7 @@ export interface DashboardState {
   calculation: ElectionCalculation | null;
   comparison: ElectionCalculation | null;
   nextSeats: Record<string, NextSeatResult>;
+  seatLosses: Record<string, NextSeatResult>;
   changes: SnapshotChanges | null;
   previousSeats: Record<string, number> | null;
 }

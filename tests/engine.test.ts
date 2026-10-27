@@ -4,6 +4,7 @@ import {
   calculateElection,
   compareSnapshots,
   publishedSeatWarnings,
+  votesToLoseSeat,
 } from '../src/lib/engine';
 import { addVotes, config, final2022, synthetic, workbook2022 } from './helpers';
 
@@ -249,6 +250,50 @@ describe('next final seat counterfactuals', () => {
   it('handles a party already holding all seats', () => {
     const { snapshot, config: c } = synthetic([500000]);
     expect(additionalVotesForNextSeat(snapshot, c, '0').status).toBe('unavailable');
+  });
+});
+
+describe('seat loss counterfactuals', () => {
+  const base = calculateElection(final2022, config);
+  const seatsOf = (id: string, lost: number) =>
+    calculateElection(addVotes(final2022, id, -lost), config).parties.find((p) => p.id === id)!;
+  it.each(base.parties.filter((p) => p.finalSeats > 0).map((p) => p.id))(
+    'verifies the adjacent count for %s',
+    (id) => {
+      const loss = votesToLoseSeat(final2022, config, id, base);
+      expect(loss.status, loss.reason ?? '').toBe('ok');
+      const n = loss.additionalVotes!;
+      const seats = base.parties.find((p) => p.id === id)!.finalSeats;
+      const before = calculateElection(addVotes(final2022, id, -(n - 1)), config);
+      if (loss.tieAtVotes !== undefined) expect(before.status).toBe('unresolved');
+      else expect(before.parties.find((p) => p.id === id)!.finalSeats).toBe(seats);
+      expect(seatsOf(id, n).finalSeats).toBe(loss.targetSeats);
+      expect(loss.targetSeats!).toBeLessThan(seats);
+      expect(loss.evaluations).toBeLessThan(60);
+    },
+  );
+  it('cross-checks the search with bounded brute force', () => {
+    const near = votesToLoseSeat(final2022, config, 'ל').additionalVotes! - 80;
+    const snapshot = addVotes(final2022, 'ל', -near);
+    const current = calculateElection(snapshot, config).parties.find(
+      (p) => p.id === 'ל',
+    )!.finalSeats;
+    const brute = Array.from({ length: 120 }, (_, i) => i + 1).find(
+      (n) =>
+        calculateElection(addVotes(snapshot, 'ל', -n), config).parties.find((p) => p.id === 'ל')!
+          .finalSeats < current,
+    );
+    expect(votesToLoseSeat(snapshot, config, 'ל').additionalVotes).toBe(brute);
+  });
+  it('reports a threshold crossing as a loss of every seat', () => {
+    // Labor's four 2022 seats sat just above the threshold.
+    const loss = votesToLoseSeat(final2022, config, 'אמת', base);
+    expect(loss.targetSeats).toBe(0);
+    expect(seatsOf('אמת', loss.additionalVotes! - 1).qualifies).toBe(true);
+    expect(seatsOf('אמת', loss.additionalVotes!).qualifies).toBe(false);
+  });
+  it('is unavailable for a party without seats', () => {
+    expect(votesToLoseSeat(final2022, config, 'מרצ').status).toBe('unavailable');
   });
 });
 

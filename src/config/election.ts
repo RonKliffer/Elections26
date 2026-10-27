@@ -29,6 +29,7 @@ export const electionConfig: ElectionConfig = {
     מרצ: { label: 'מרצ', color: '#61795c' },
     ד: { label: 'בל״ד', color: '#737085' },
     ב: { label: 'הבית היהודי', color: '#6a7584' },
+    יז: { label: 'הכלכלית החדשה', color: '#7d7a5c' },
   },
   expectedBallots: [
     'אמת',
@@ -72,7 +73,44 @@ export const electionConfig: ElectionConfig = {
     'שס',
     'ת',
   ],
-  blocs: [],
+  // Displayed right to left at the top of the dashboard. Party IDs missing from
+  // the current source are ignored.
+  blocs: [
+    { name: 'גוש נתניהו', partyIds: ['מחל', 'ט', 'שס', 'ג'], color: '#c0392b' },
+    { name: 'המילואימניקים והכלכלית', partyIds: ['יז'], color: '#7b4fa0' },
+    { name: 'המפלגות הערביות', partyIds: ['עם', 'ום', 'ד'], color: '#6b7280' },
+    { name: 'גוש השינוי', partyIds: ['ל', 'פה', 'כן', 'אמת', 'מרצ'], color: '#2563a8' },
+  ],
+  // Right-to-left display order for the coalition picker. Intended 2026 order:
+  // עוצמה יהודית, הציונות הדתית, ש״ס, יהדות התורה, הליכוד, המילואימניקים והכלכלית,
+  // בל״ד, המשותפת, חד״ש–תע״ל, רע״ם, ישר, ביחד, המחנה הממלכתי, ישראל ביתנו,
+  // יש עתיד, הדמוקרטים, העבודה, מרצ. Only 2022 IDs are listed for now.
+  partyOrder: ['ט', 'שס', 'ג', 'מחל', 'יז', 'ד', 'ום', 'עם', 'כן', 'ל', 'פה', 'אמת', 'מרצ'],
+  // Default scenarios for the top bar. "right" is the camp led by Netanyahu
+  // (today's coalition), "left" the alternative camp; parties in neither list stay
+  // in the middle. Users can move parties in the browser.
+  coalitions: [
+    {
+      name: 'הקואליציה הנוכחית',
+      right: ['מחל', 'ט', 'שס', 'ג'],
+      left: ['כן', 'ל', 'פה', 'אמת', 'מרצ'],
+    },
+    {
+      name: 'השינוי ורע״ם',
+      right: ['מחל', 'ט', 'שס', 'ג'],
+      left: ['עם', 'כן', 'ל', 'פה', 'אמת', 'מרצ'],
+    },
+    {
+      name: 'הליכוד, ישר, ביחד וישראל ביתנו',
+      right: ['מחל', 'ל'],
+      left: ['כן', 'פה', 'אמת', 'מרצ'],
+    },
+    {
+      name: 'השינוי ויהדות התורה',
+      right: ['מחל', 'ט', 'שס'],
+      left: ['ג', 'כן', 'ל', 'פה', 'אמת', 'מרצ'],
+    },
+  ],
   thresholdWatchDistance: 0.5,
 };
 

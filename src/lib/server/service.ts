@@ -1,5 +1,10 @@
 import type { DashboardState, ElectionConfig, ElectionSnapshot } from '../types';
-import { additionalVotesForNextSeat, calculateElection, compareSnapshots } from '../engine';
+import {
+  additionalVotesForNextSeat,
+  calculateElection,
+  compareSnapshots,
+  votesToLoseSeat,
+} from '../engine';
 import { assertSnapshot, type ElectionSourceAdapter } from '../source';
 import { snapshotFingerprint, type SnapshotStore } from './store';
 
@@ -36,6 +41,7 @@ export class ElectionService {
       calculation: null,
       comparison: null,
       nextSeats: {},
+      seatLosses: {},
       changes: null,
       previousSeats: null,
     };
@@ -49,6 +55,11 @@ export class ElectionService {
         p.id,
         additionalVotesForNextSeat(snapshot, this.config, p.id, calculation),
       ]),
+    );
+    this.state.seatLosses = Object.fromEntries(
+      calculation.parties
+        .filter((p) => p.finalSeats > 0)
+        .map((p) => [p.id, votesToLoseSeat(snapshot, this.config, p.id, calculation)]),
     );
     this.state.changes = this.previous
       ? compareSnapshots(this.previous, snapshot, this.config)
