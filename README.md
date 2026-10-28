@@ -2,7 +2,7 @@
 
 Hebrew RTL dashboard with independently calculated Bader–Ofer seats, surplus agreements, next-seat vote scenarios, threshold analytics, and a coalition calculator. Built with Next.js App Router, strict TypeScript, Tailwind CSS, and Vitest.
 
-The default is **official-source mode for the live 2026 election (Knesset 26)** at [votes26.bechirot.gov.il](https://votes26.bechirot.gov.il). The roster comes from the [committee’s official candidate guide](https://www.gov.il/he/pages/candidates-lists-26); the dashboard uses the four surplus agreements specified by the user. An explicitly selected offline demo uses the historical 2022 election and its separate configuration. Excel is a development reference only: the application, build, tests, and offline demo require no spreadsheet software or workbook access.
+The default is **official-source mode for the live 2026 election (Knesset 26)** at [votes26.bechirot.gov.il](https://votes26.bechirot.gov.il). The roster comes from the [committee’s official candidate guide](https://www.gov.il/he/pages/candidates-lists-26); the dashboard uses all five 2026 surplus agreements. An explicitly selected offline demo uses the historical 2022 election and its separate configuration. Excel is a development reference only: the application, build, tests, and offline demo require no spreadsheet software or workbook access.
 
 ## Run locally
 
@@ -59,11 +59,11 @@ Set `ELECTION_DATA_MODE=demo` in `.env.local` and restart. This reads `fixtures/
 
 `src/config/election.ts` configures Knesset 26, 120 seats, and a threshold of `13/400`. Party IDs are the current official ballot letters; old letters are not carried forward by display name. For example, `פה` is now “אני ואתה”, `ב` is Otzma Yehudit, and `ד` is “השותפות לכולם”. The new major lists include `דרך` (Yashar), `רק` (Beyachad), `די` (the reservists/economic list), and `ודם` (the Joint List).
 
-The four configured surplus agreements are Likud–Religious Zionism (`מחל / ט`), Shas–United Torah Judaism (`שס / ג`), Yashar–Democrats (`דרך / אמת`), and Beyachad–Yisrael Beiteinu (`רק / ל`), as specified by the user. Both parties must qualify independently. Withdrawn lists `כן` and `צבי` currently appear with zero votes on the results page; their rows are accepted but not required.
+The five configured surplus agreements are Likud–Religious Zionism (`מחל / ט`), Shas–United Torah Judaism (`שס / ג`), Yashar–Democrats (`דרך / אמת`), Beyachad–Yisrael Beiteinu (`רק / ל`), and Ra'am–Joint List (`עם / ודם`), as reported in [the 2026 agreement summary](https://www.ynet.co.il/news/elections2026/article/skdhsmfsmx). Both parties must qualify independently. Withdrawn lists `כן` and `צבי` currently appear with zero votes on the results page; their rows are accepted but not required.
 
 `src/lib/source2026.ts` reads the redesigned national page’s summary cards and desktop results table. Mobile cards repeat the votes and are ignored. It validates the election identity, required roster, unique ballot identifiers, safe integer counts, every party’s contribution to the national valid-vote total, valid plus invalid against votes cast, and votes cast against eligible voters. All counts belong to the same national publication; this adapter does not require a second CSV publication. Unknown lists are included with a warning, never discarded.
 
-The source’s explicit `תוצאות נכון ל- DD/MM/YYYY HH:mm` timestamp is converted from `Asia/Jerusalem`, including daylight saving time. It remains `null` if not published. The notice that final results will be published later identifies provisional results; it is not a final-results declaration. No reporting percentage is inferred from the count of polling stations or turnout. The dashboard labels the reported votes’ share of eligible voters separately.
+The source’s explicit `תוצאות נכון ל- DD/MM/YYYY HH:mm` timestamp is converted from `Asia/Jerusalem`, including daylight saving time. It remains `null` if not published. The notice that final results will be published later identifies provisional results; it is not a final-results declaration. When the source provides no reporting percentage, the subtitle shows reported votes as a share of estimated voters, using eligible voters × 0.777 (assumed overall turnout of 77.7%), and labels that denominator as an estimate.
 
 At very early counts the integer quota can produce an unresolved or invalid allocation. Valid vote totals remain visible, with the engine’s diagnostic. Coalition and seat charts appear only after a complete valid allocation; incomplete seats are not presented as a finished distribution. Next-seat scenarios also remain unavailable when the count is too small.
 
@@ -111,6 +111,8 @@ Environment settings are documented in `.env.example`. `ELECTION_CACHE_DIR` defa
 ## Fixtures, tests, and reference workbook
 
 `fixtures/2026/` contains the browser-captured official national DOM, normalized snapshot, and capture provenance. It is a regression fixture, never a fallback for live official mode. `npm run capture` explicitly captures the current 2026 national page; `npm run capture -- --saved` regenerates JSON from the saved page while preserving capture provenance. An HTTP failure aborts capture before replacing fixtures.
+
+The separate `surplus-regression.json` snapshot preserves the 28 October 07:57 Israel-time publication (2,937,354 valid votes), with its own provenance. It reproduces the missing Arab surplus agreement's effect: 56 current-coalition seats without the agreement, 55 with it, while all 120 seats remain allocated.
 
 `fixtures/2022/` retains the original official HTML/CSV, normalized snapshot, provenance, and independently extracted workbook snapshot. `npm run capture -- --2022 --saved` regenerates that historical snapshot. Do not recapture fixtures as part of routine tests.
 

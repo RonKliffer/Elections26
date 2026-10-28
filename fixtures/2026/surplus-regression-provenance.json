@@ -1,0 +1,8 @@
+{
+  "capturedAt": "2026-10-28T06:29:43.337Z",
+  "officialUpdatedAt": "2026-10-28T05:57:00.000Z",
+  "sourceUrl": "https://votes26.bechirot.gov.il",
+  "method": "Browser2026Adapter.fetchSnapshot: isolated WebKit navigation and normalizeOfficial2026",
+  "agreementsSourceUrl": "https://www.ynet.co.il/news/elections2026/article/skdhsmfsmx",
+  "note": "Additional normalized regression fixture for the missing Ra'am–Joint List surplus agreement: the same 2,937,354 valid votes yield 56 coalition seats without it and 55 with it. Test data only, never a live-data fallback. The original early-count parser fixtures are preserved."
+}

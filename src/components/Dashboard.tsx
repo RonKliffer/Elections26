@@ -117,10 +117,10 @@ export default function Dashboard() {
   const allocated = calc?.status === 'ok';
   const earlyCount =
     !!calc && calc.parties.length > 0 && calc.statutoryQuota < (data?.config.totalSeats ?? 120);
-  // Votes divided by the electorate is not the percentage of ballots counted.
-  const reportedElectorateShare =
-    snapshot?.votesCast != null && snapshot.eligibleVoters
-      ? (snapshot.votesCast / snapshot.eligibleVoters) * 100
+  const estimatedVoters = snapshot?.eligibleVoters ? snapshot.eligibleVoters * 0.777 : null;
+  const reportedEstimatedVoterShare =
+    snapshot?.votesCast != null && estimatedVoters
+      ? (snapshot.votesCast / estimatedVoters) * 100
       : null;
   return (
     <>
@@ -171,11 +171,10 @@ export default function Dashboard() {
             {snapshot && snapshot.reportingProgress === null && snapshot.votesCast !== null && (
               <p className="count-progress">
                 דווחו <strong className="num">{number(snapshot.votesCast)}</strong> קולות
-                {reportedElectorateShare !== null && (
+                {reportedEstimatedVoterShare !== null && (
                   <>
-                    {' '}
-                    · <bdi className="num">{number(reportedElectorateShare, 2)}%</bdi> מבעלי זכות
-                    הבחירה
+                    , <bdi className="num">{number(reportedEstimatedVoterShare, 2)}%</bdi> מכמות
+                    המצביעים המשוערת
                   </>
                 )}
               </p>

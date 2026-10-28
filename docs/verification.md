@@ -1,5 +1,12 @@
 # Verification record
 
+## Missing 2026 Arab surplus agreement — 28 October 2026
+
+- Retrieved and normalized the official 07:57 Israel-time publication with isolated WebKit: 2,937,354 valid votes. Running the same snapshot with the existing four agreements reproduced 56 seats for the current coalition.
+- Added the missing Ra'am–Joint List agreement (`עם / ודם`), also reported in [the 2026 surplus-agreement summary](https://www.ynet.co.il/news/elections2026/article/skdhsmfsmx). On the identical votes, the Joint List receives 12 seats instead of 11 and Otzma Yehudit receives 6 instead of 7; the current coalition totals 55. Both quota modes agree and allocate all 120 seats.
+- Preserved this normalized publication and its capture provenance in separate regression fixtures, retaining the original early-count parser fixtures. Regression tests check the complete distribution, surplus recipients, and the old 56-seat result when that agreement is omitted.
+- All 145 automated tests, strict TypeScript checking, and the Webpack production build passed. Replayed the captured publication through `ElectionService` on both cache initialization and refresh; both returned 55 coalition seats, five agreements, and 120 total seats.
+
 ## Container certificate trust — 28 October 2026
 
 - Commit `c58a9b0` deployed successfully. The live endpoint returned diagnostic JSON: direct fetch received HTTP 404 and Linux WebKit reported `Unacceptable TLS certificate`.

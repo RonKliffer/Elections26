@@ -1,7 +1,8 @@
 import type { ElectionConfig } from '@/lib/types';
 
 // Roster: https://www.gov.il/he/pages/candidates-lists-26
-// Surplus agreements: the four pairs specified by the user for this dashboard.
+// Surplus agreements: all five 2026 pairs, including Ra'am–Joint List.
+// https://www.ynet.co.il/news/elections2026/article/skdhsmfsmx
 // Ballot letters are election-specific: פה is no longer Yesh Atid, and ד is not Balad.
 export const electionConfig: ElectionConfig = {
   electionId: '26',
@@ -15,6 +16,7 @@ export const electionConfig: ElectionConfig = {
     ['שס', 'ג'],
     ['דרך', 'אמת'],
     ['רק', 'ל'],
+    ['עם', 'ודם'],
   ],
   parties: {
     מחל: { label: 'הליכוד', color: '#355b98' },

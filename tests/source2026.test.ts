@@ -41,13 +41,14 @@ describe('2026 official results', () => {
     expect(snapshot.parties.find((p) => p.id === 'ד')!.name).toBe('השותפות לכולם');
     expect(snapshot.parties.every((p) => p.officialSeats === null)).toBe(true);
   });
-  it('uses the four configured 2026 agreements and keeps withdrawn zero-vote lists optional', () => {
+  it('uses all five 2026 agreements and keeps withdrawn zero-vote lists optional', () => {
     expect(electionConfig.testing).toBe(false);
     expect(electionConfig.surplusAgreements).toEqual([
       ['מחל', 'ט'],
       ['שס', 'ג'],
       ['דרך', 'אמת'],
       ['רק', 'ל'],
+      ['עם', 'ודם'],
     ]);
     const snapshot = normalize(
       edit(($) => {
