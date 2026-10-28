@@ -127,22 +127,6 @@ export const electionConfig: ElectionConfig = {
       right: ['מחל', 'ט', 'ב', 'שס', 'ג'],
       left: ['דרך', 'רק', 'אמת', 'ל'],
     },
-    {
-      name: 'השינוי ורע״ם',
-      right: ['מחל', 'ט', 'ב', 'שס', 'ג'],
-      left: ['דרך', 'רק', 'אמת', 'ל', 'עם'],
-    },
-    {
-      name: 'הליכוד, ישר, ביחד',
-      right: ['מחל', 'דרך', 'רק'],
-      left: ['ל', 'אמת', 'ט', 'ב', 'שס', 'ג'],
-      campLabels: { right: 'גוש אחדות', left: 'גוש מתנגד' },
-    },
-    {
-      name: 'השינוי ויהדות התורה',
-      right: ['מחל', 'ט', 'ב', 'שס'],
-      left: ['דרך', 'רק', 'אמת', 'ל', 'ג'],
-    },
   ],
   thresholdWatchDistance: 0.5,
 };
@@ -150,7 +134,10 @@ export const electionConfig: ElectionConfig = {
 export function partyLabel(id: string, config: ElectionConfig, fallback = id): string {
   return config.parties[id]?.label ?? fallback;
 }
+// A party takes its bloc's color, so the same camp reads alike everywhere.
 export function partyColor(id: string, config: ElectionConfig): string {
+  const bloc = config.blocs.find((b) => b.partyIds.includes(id));
+  if (bloc?.color) return bloc.color;
   const palette = ['#61778c', '#8e6d62', '#677960', '#7e6b8f', '#497d82'];
   const hash = [...id].reduce((n, c) => n + c.charCodeAt(0), 0);
   return config.parties[id]?.color ?? palette[hash % palette.length]!;

@@ -53,6 +53,8 @@ function Metric({
     </div>
   );
 }
+// Assumed overall turnout, used to project the count to its expected final size.
+const assumedTurnout = 0.777;
 const connectionLabels = {
   loading: 'מתחברים למקור',
   fresh: 'השליפה האחרונה הצליחה',
@@ -117,11 +119,6 @@ export default function Dashboard() {
   const allocated = calc?.status === 'ok';
   const earlyCount =
     !!calc && calc.parties.length > 0 && calc.statutoryQuota < (data?.config.totalSeats ?? 120);
-  const estimatedVoters = snapshot?.eligibleVoters ? snapshot.eligibleVoters * 0.777 : null;
-  const reportedEstimatedVoterShare =
-    snapshot?.votesCast != null && estimatedVoters
-      ? (snapshot.votesCast / estimatedVoters) * 100
-      : null;
   return (
     <>
       <a className="skip-link" href="#main">
@@ -170,13 +167,16 @@ export default function Dashboard() {
             )}
             {snapshot && snapshot.reportingProgress === null && snapshot.votesCast !== null && (
               <p className="count-progress">
-                דווחו <strong className="num">{number(snapshot.votesCast)}</strong> קולות
-                {reportedEstimatedVoterShare !== null && (
+                דווחו{' '}
+                {snapshot.eligibleVoters ? (
                   <>
-                    , <bdi className="num">{number(reportedEstimatedVoterShare, 2)}%</bdi> מכמות
-                    המצביעים המשוערת
+                    <strong className="num">
+                      {number((snapshot.votesCast / snapshot.eligibleVoters) * 100, 2)}%
+                    </strong>{' '}
+                    מבעלי זכות הבחירה:{' '}
                   </>
-                )}
+                ) : null}
+                <bdi className="num">{number(snapshot.votesCast)}</bdi> קולות
               </p>
             )}
             <p>נתוני ועדת הבחירות המרכזית, עם חלוקת מנדטים עצמאית ושקופה.</p>
@@ -267,13 +267,13 @@ export default function Dashboard() {
         ) : (
           <>
             <Blocs data={data!} sim={sim}>
-              <ThresholdWatch calc={calc} data={data!} />
               {allocated && (
                 <>
                   <SeatChart calc={calc} data={data!} sim={sim} onSim={setSim} />
                   <SeatEdge calc={calc} data={data!} />
                 </>
               )}
+              <Projections calc={calc} data={data!} />
             </Blocs>
             {!!data!.changes?.agreementChanges.length && (
               <div className="notice notice-warning" role="status">
@@ -304,35 +304,7 @@ export default function Dashboard() {
             ) : (
               <ExactView data={data!} />
             )}
-            <section className="metrics-grid" aria-label="נתונים ארציים">
-              <Metric
-                label="קולות כשרים"
-                value={number(snapshot.validVotes)}
-                sub={`${number(snapshot.votesCast)} קולות שהצביעו בפועל`}
-                extraSub={`${number(snapshot.invalidVotes)} קולות פסולים`}
-              />
-              <Metric
-                label="שיעור הצבעה כשרה"
-                value={
-                  snapshot.eligibleVoters
-                    ? `${number((snapshot.validVotes / snapshot.eligibleVoters) * 100, 2)}%`
-                    : '—'
-                }
-                sub={`${number(snapshot.eligibleVoters)} בעלי זכות בחירה`}
-                extraSub={`${snapshot.votesCast !== null && snapshot.eligibleVoters ? `${number((snapshot.votesCast / snapshot.eligibleVoters) * 100, 2)}%` : '—'} שיעור הצבעה כולל`}
-              />
-              <Metric
-                label="אחוז החסימה בקולות"
-                value={number(calc.thresholdVotes)}
-                sub={`${number((data!.config.electoralThreshold.numerator / data!.config.electoralThreshold.denominator) * 100, 2)}% מכל הקולות הכשרים`}
-              />
-              <Metric
-                label="קולות מתחת לסף"
-                value={number(calc.wastedVotes)}
-                sub={`${number(calc.wastedPercentage, 2)}% מהקולות הכשרים`}
-                warning
-              />
-            </section>
+            <ThresholdWatch calc={calc} data={data!} />
             <details className="panel data-details">
               <summary>סיכום ארצי ופרטי המקור</summary>
               <dl className="data-grid">
@@ -417,7 +389,7 @@ interface Unit {
   label: string;
   seats: number;
 }
-const defaultCampLabels: Record<Camp, string> = { right: 'גוש נתניהו', left: 'גוש השינוי' };
+const defaultCampLabels: Record<Camp, string> = { right: 'גוש נתניהו', left: 'גוש איזנקוט' };
 const splitSuffix = ':split';
 function campStatus(seats: number, other: number, majority: number) {
   if (seats >= majority) return { label: 'רוב מוחלט', tone: 'absolute' };
@@ -494,7 +466,6 @@ function Blocs({
       splits: {},
     }));
   const [scenarios, setScenarios] = useState<Scenario[]>(defaults);
-  const [active, setActive] = useState(0);
   const [hydrated, setHydrated] = useState(false);
   // The detailed picker starts collapsed; the bar above is the main way to move parties.
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -562,10 +533,8 @@ function Blocs({
   }, [dragging]);
   if (scenarios.length === 0) return null;
 
-  const current = scenarios[Math.min(active, scenarios.length - 1)]!;
-  const campLabels =
-    config.coalitions[Math.min(active, config.coalitions.length - 1)]?.campLabels ??
-    defaultCampLabels;
+  const current = scenarios[0]!;
+  const campLabels = config.coalitions[0]?.campLabels ?? defaultCampLabels;
   const splitOf = (id: string): Split => {
     const split = current.splits[id];
     const max = (parties.find((p) => p.id === id)?.finalSeats ?? 1) - 1;
@@ -625,7 +594,7 @@ function Blocs({
     left: campStatus(left.seats, right.seats, majority),
   };
   const update = (change: (s: Scenario) => Scenario) =>
-    setScenarios((old) => old.map((s, i) => (i === active ? change(s) : s)));
+    setScenarios((old) => old.map((s, i) => (i === 0 ? change(s) : s)));
   const setPartyCamp = (id: string, side: Camp | null) =>
     update((s) => ({
       ...s,
@@ -659,17 +628,7 @@ function Blocs({
   return (
     <>
       <section className="panel blocs-panel" aria-label="תמונת הגושים">
-        <div className="scenario-tabs" role="tablist" aria-label="תרחישי קואליציה">
-          {scenarios.map((s, i) => (
-            <button
-              key={s.name}
-              role="tab"
-              aria-selected={i === active}
-              onClick={() => setActive(i)}
-            >
-              {s.name}
-            </button>
-          ))}
+        <div className="scenario-tabs">
           <button className="text-button" onClick={() => setScenarios(defaults())}>
             איפוס
           </button>
@@ -889,15 +848,8 @@ function SeatChart({
         <div>
           <div className="eyebrow">{sim ? 'הדמיה · לא תוצאה' : 'החלוקה המחושבת'}</div>
           <h2>תמונת המנדטים</h2>
-          <p className="seat-quota">
-            מודד למנדט: <strong className="num">{number(calc.statutoryQuota)}</strong> קולות
-          </p>
         </div>
         <div className="seat-heading-side">
-          <div className="seats-total">
-            <strong className="num">{total}</strong>
-            <span>/ {config.totalSeats} מושבים</span>
-          </div>
           <div className="sim-controls">
             {sim && changed && (
               <button className="text-button" onClick={() => onSim({ ...real })}>
@@ -957,25 +909,13 @@ function SeatChart({
           );
         })}
       </div>
-      <div className="seat-foot">
-        {sim ? (
+      {sim && (
+        <div className="seat-foot">
           <span>
             הפס העליון וחלוקת הגושים מציגים את המנדטים שבהדמיה. שאר הנתונים בעמוד אמיתיים.
           </span>
-        ) : (
-          <>
-            <span>
-              <strong className="num">{calc.initialSeats}</strong> בהקצאה ראשונית
-            </span>
-            <span>
-              <strong className="num">{calc.surplusSeats}</strong> בשלב העודפים
-            </span>
-            <span className={calc.status === 'ok' ? 'positive-text' : 'warning-text'}>
-              {calc.status === 'ok' ? 'כל המושבים חולקו' : 'חלוקה לא הושלמה'}
-            </span>
-          </>
-        )}
-      </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -1034,6 +974,59 @@ function SeatEdge({ calc, data }: { calc: ElectionCalculation; data: DashboardSt
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+/** Today's count scaled to the assumed final turnout, keeping current proportions. */
+function Projections({ calc, data }: { calc: ElectionCalculation; data: DashboardState }) {
+  const snapshot = data.snapshot!;
+  const { numerator, denominator } = data.config.electoralThreshold;
+  const eligible = snapshot.eligibleVoters;
+  const validShare = snapshot.votesCast ? snapshot.validVotes / snapshot.votesCast : 1;
+  const estimatedVoters = eligible ? eligible * assumedTurnout : null;
+  const projectedValid = estimatedVoters === null ? null : estimatedVoters * validShare;
+  const projectedThreshold =
+    projectedValid === null ? null : Math.ceil((projectedValid * numerator) / denominator);
+  const projectedQualifying =
+    projectedValid === null || !snapshot.validVotes
+      ? null
+      : projectedValid * (calc.qualifyingVotes / snapshot.validVotes);
+  const projectedQuota =
+    projectedQualifying === null ? null : Math.floor(projectedQualifying / data.config.totalSeats);
+  const pct = (value: number | null, digits = 2) =>
+    value === null ? '—' : `${number(value, digits)}%`;
+  return (
+    <section className="metrics-grid" aria-label="נתונים ארציים ותחזית">
+      <Metric
+        label="דווח ממספר המצביעים המשוער"
+        value={pct(
+          snapshot.votesCast !== null && estimatedVoters
+            ? (snapshot.votesCast / estimatedVoters) * 100
+            : null,
+        )}
+        sub={`${number(snapshot.votesCast)} מתוך כ־${number(estimatedVoters)} מצביעים משוערים`}
+        extraSub={`לפי שיעור הצבעה של ${pct(assumedTurnout * 100, 1)} מבעלי זכות הבחירה`}
+      />
+      <Metric
+        label="הקולות הכשרים"
+        value={pct(eligible ? (snapshot.validVotes / eligible) * 100 : null)}
+        sub={`${number(snapshot.validVotes)} קולות כשרים`}
+        extraSub={`${number(snapshot.invalidVotes)} קולות פסולים`}
+      />
+      <Metric
+        label="המודד הצפוי למנדט"
+        value={number(projectedQuota)}
+        sub={`${number(projectedQualifying)} קולות צפויים לרשימות שמעל הסף, חלקי ${data.config.totalSeats}`}
+        extraSub={`בהנחה שהפרופורציות יישמרו · כרגע ${number(calc.statutoryQuota)}`}
+      />
+      <Metric
+        label="אחוז החסימה הצפוי"
+        value={number(projectedThreshold)}
+        sub={`קולות שהתבזבזו: ${pct(calc.wastedPercentage)}${calc.statutoryQuota > 0 ? ` · כ־${number(calc.wastedVotes / calc.statutoryQuota, 1)} מנדטים` : ''}`}
+        extraSub={`${number(calc.wastedVotes)} קולות שהתבזבזו בסך הכול`}
+        warning
+      />
     </section>
   );
 }
